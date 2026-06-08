@@ -583,17 +583,22 @@ function submitForm(){
   var rowArr=COLS.map(function(c){return data[c]!=null?data[c]:'';});
 
   var overlay=showSpinnerModal('Guardando solicitud...');
-  Grid.sheets.append(SPREADSHEET_ID, APPEND_RANGE, [rowArr]).then(function(){
+  fetch('http://verdi-flows.melisystems.com/webhook/2ec9e952-d829-46fd-aac0-6a4419bd79fb',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(data)
+  }).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
     closeModal();
     toast('Solicitud #'+id+' creada');
-if(session.role!=='mantenimiento'){
+    if(session.role!=='mantenimiento'){
       var tabBtns=document.querySelectorAll('.tab');
       switchTab('mis',tabBtns[0]);
     }
     loadData(false);
   }).catch(function(err){
     closeModal();
-    showAlert('Error','No se pudo guardar la solicitud: '+esc(JSON.stringify(err)));
+    showAlert('Error','No se pudo guardar la solicitud: '+esc(err&&err.message||String(err)));
   });
 }
 
