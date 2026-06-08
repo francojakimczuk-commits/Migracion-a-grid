@@ -225,8 +225,6 @@
 
 /* ===== Config ===== */
 var SPREADSHEET_ID = '1RrTWra9E5xvJDWh2-owhz2yIuvqE9cDFa1r1YeY3lIY';
-var VERDIFLOW_NUEVA_SOLICITUD = 'http://verdi-flows.melisystems.com/webhook/2ec9e952-d829-46fd-aac0-6a4419bd79fb';
-var VERDIFLOW_CAMBIO_ESTADO   = '';
 var SHEET = 'Hoja1';
 var RANGE = SHEET + '!A1:AE10000';
 var APPEND_RANGE = SHEET + '!A:AE';
@@ -578,10 +576,7 @@ function submitForm(){
   Grid.sheets.append(SPREADSHEET_ID, APPEND_RANGE, [rowArr]).then(function(){
     closeModal();
     toast('Solicitud #'+id+' creada');
-    if(VERDIFLOW_NUEVA_SOLICITUD){
-      fetch(VERDIFLOW_NUEVA_SOLICITUD,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).catch(function(){});
-    }
-    if(session.role!=='mantenimiento'){
+if(session.role!=='mantenimiento'){
       var tabBtns=document.querySelectorAll('.tab');
       switchTab('mis',tabBtns[0]);
     }
