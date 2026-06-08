@@ -583,7 +583,7 @@ if(session.role!=='mantenimiento'){
     loadData(false);
   }).catch(function(err){
     closeModal();
-    showAlert('Error','No se pudo guardar la solicitud: '+esc(err&&err.message||err));
+    showAlert('Error','No se pudo guardar la solicitud: '+esc(JSON.stringify(err)));
   });
 }
 
