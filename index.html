@@ -583,7 +583,7 @@ function submitForm(){
   var rowArr=COLS.map(function(c){return data[c]!=null?data[c]:'';});
 
   var overlay=showSpinnerModal('Guardando solicitud...');
-  fetch('https://verdi-flows.melisystems.com/webhook/2ec9e952-d829-46fd-aac0-6a4419bd79fb',{
+  fetch('https://api.mercadolibre.com/workspace/genai/verdi-flows/webhook/2ec9e952-d829-46fd-aac0-6a4419bd79fb/external',{
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Basic Zmpha2ltY3p1azpKYWtpbmN6dWsuMDk='},
     body:JSON.stringify(data)
