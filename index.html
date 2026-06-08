@@ -585,17 +585,16 @@ function submitForm(){
   var overlay=showSpinnerModal('Guardando solicitud...');
   fetch('https://api.mercadolibre.com/workspace/genai/verdi-flows/webhook/2ec9e952-d829-46fd-aac0-6a4419bd79fb/external',{
     method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Basic Zmpha2ltY3p1azpKYWtpbmN6dWsuMDk='},
+    mode:'no-cors',
+    headers:{'Content-Type':'text/plain'},
     body:JSON.stringify(data)
-  }).then(function(r){
-    if(!r.ok) throw new Error('HTTP '+r.status);
+  }).then(function(){
     closeModal();
     toast('Solicitud #'+id+' creada');
     if(session.role!=='mantenimiento'){
       var tabBtns=document.querySelectorAll('.tab');
       switchTab('mis',tabBtns[0]);
     }
-    loadData(false);
   }).catch(function(err){
     closeModal();
     showAlert('Error','No se pudo guardar la solicitud: '+esc(err&&err.message||String(err)));
