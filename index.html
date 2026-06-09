@@ -183,20 +183,14 @@
     <div class="logo">&#127959;</div>
     <h1>Edilicio - Solicitudes</h1>
     <p>Sistema de tickets de mantenimiento</p>
-    <div class="field" style="margin-bottom:16px;">
-      <label>Tu email</label>
-      <input type="email" id="loginEmail" placeholder="nombre@mercadolibre.com">
-    </div>
-    <label>&iquest;Sos del equipo de mantenimiento?</label>
-    <div class="role-choice">
-      <div class="opt active" data-role="operativo" onclick="selectRole(this,'operativo')">
-        No, soy operativo<small>Crear y ver mis solicitudes</small>
+    <div id="loginStatus" style="color:var(--gray);margin-bottom:16px;font-size:13px;">Detectando usuario...</div>
+    <div id="loginFallback" style="display:none;">
+      <div class="field" style="margin-bottom:16px;">
+        <label>Tu email corporativo</label>
+        <input type="email" id="loginEmail" placeholder="nombre@mercadolibre.com">
       </div>
-      <div class="opt" data-role="mantenimiento" onclick="selectRole(this,'mantenimiento')">
-        S&iacute;, mantenimiento<small>Gestionar todas las solicitudes</small>
-      </div>
+      <button class="btn yellow" style="width:100%;margin-top:8px;" onclick="doLoginManual()">Ingresar</button>
     </div>
-    <button class="btn yellow" style="width:100%;margin-top:8px;" onclick="doLogin()">Ingresar</button>
   </div>
 </div>
 
@@ -230,7 +224,73 @@ var RANGE = SHEET + '!A1:AE10000';
 var APPEND_RANGE = SHEET + '!A:AE';
 
 /* In-memory session (lives only in this variable) */
-var session = { email: '', role: '' };
+var session = { email: '', role: '', turno: '', site: '' };
+
+/* ===== Users & Roles ===== */
+var MAINT_USERS = {
+  'sebastian.ghilino@mercadolibre.com':       { permiso:'planner',  turno:'-',             site:'ARBA02' },
+  'kevinbraian.ponce@mercadolibre.com':        { permiso:'tecnico',  turno:'T2B',           site:'ARBA01' },
+  'matias.malonso@mercadolibre.com':           { permiso:'tecnico',  turno:'T2A',           site:'ARBA01' },
+  'german.velazquez@mercadolibre.com':         { permiso:'tl',       turno:'-',             site:'ARBA01' },
+  'claribel.ayerza@mercadolibre.com':          { permiso:'planner',  turno:'-',             site:'ARBA01' },
+  'nahuel.diaz@mercadolibre.com':              { permiso:'tecnico',  turno:'T1A',           site:'ARBA01' },
+  'mariano.medina@mercadolibre.com':           { permiso:'tecnico',  turno:'T2B',           site:'ARBA01' },
+  'horacio.barrientos@mercadolibre.com':       { permiso:'planner',  turno:'-',             site:'ARBA02' },
+  'tomas.cerrudo@mercadolibre.com':            { permiso:'tecnico',  turno:'T2A',           site:'ARBA01' },
+  'leonela.gasparoni@mercadolibre.com':        { permiso:'tecnico',  turno:'-',             site:'ARBA01' },
+  'florenciamicaela.figueroa@mercadolibre.com':{ permiso:'tecnico',  turno:'T2A',           site:'ARBA01' },
+  'nicolas.lrodriguez@mercadolibre.com':       { permiso:'tecnico',  turno:'T1A',           site:'ARBA01' },
+  'joaquin.coronel@mercadolibre.com':          { permiso:'tecnico',  turno:'T2A',           site:'ARBA01' },
+  'alexis.campesato@mercadolibre.com':         { permiso:'tecnico',  turno:'T2A',           site:'ARBA01' },
+  'julianjoaquin.paz@mercadolibre.com':        { permiso:'tl',       turno:'Turno tarde',   site:'ARBA02' },
+  'marcos.veraacosta@mercadolibre.com':        { permiso:'tecnico',  turno:'Turno mañana',  site:'ARBA02' },
+  'franco.jakimczuk@mercadolibre.com':         { permiso:'planner',  turno:'-',             site:'ARBA01' },
+  'matias.capuano@mercadolibre.com':           { permiso:'tl',       turno:'T2B',           site:'ARBA01' },
+  'gabriel.fuerte@mercadolibre.com':           { permiso:'tl',       turno:'T1A',           site:'ARBA01' },
+  'juanjose.esposito@mercadolibre.com':        { permiso:'tecnico',  turno:'T1B',           site:'ARBA01' },
+  'maximiliano.muriega@mercadolibre.com':      { permiso:'planner',  turno:'-',             site:'ARBA01' },
+  'lucasnahuel.vargas@mercadolibre.com':       { permiso:'tecnico',  turno:'T1A',           site:'ARBA01' },
+  'matias.fernandezalvarez@mercadolibre.com':  { permiso:'admin',    turno:'-',             site:'ARBA01' },
+  'francovalentin.kokojaczuk@mercadolibre.com':{ permiso:'tecnico',  turno:'T1A',           site:'ARBA01' },
+  'jose.esqueda@mercadolibre.com':             { permiso:'tl',       turno:'T2A',           site:'ARBA01' },
+  'leandroivan.anatilio@mercadolibre.com':     { permiso:'tecnico',  turno:'Turno tarde',   site:'ARBA02' },
+  'lucathomas.albornoz@mercadolibre.com':      { permiso:'tecnico',  turno:'Turno noche',   site:'ARBA02' },
+  'matiasenzo.dipaolo@mercadolibre.com':       { permiso:'tecnico',  turno:'Turno mañana',  site:'ARBA02' },
+  'diaz.leandromiguel@mercadolibre.com':       { permiso:'tecnico',  turno:'Turno tarde',   site:'ARBA02' },
+  'antonioalejandro.espinosa@mercadolibre.com':{ permiso:'tecnico',  turno:'T1A',           site:'ARBA01' },
+  'isaiascatriel.arce@mercadolibre.com':       { permiso:'tecnico',  turno:'T2B',           site:'ARBA01' },
+  'eliasvalentin.fernandez@mercadolibre.com':  { permiso:'tecnico',  turno:'T1B',           site:'ARBA01' },
+  'gonzalodaniel.ayalavelazquez@mercadolibre.com':{ permiso:'tecnico',turno:'T2B',          site:'ARBA01' },
+  'napoleonbladimir.careocalicho@mercadolibre.com':{ permiso:'tecnico',turno:'T1B',         site:'ARBA01' },
+  'uriel.utorres@mercadolibre.com':            { permiso:'tecnico',  turno:'T2B',           site:'ARBA01' },
+  'leandroezequiel.lgonzalez@mercadolibre.com':{ permiso:'tl',       turno:'T1B',           site:'ARBA01' },
+  'lucasuriel.chazarreta@mercadolibre.com':    { permiso:'tecnico',  turno:'T1A',           site:'ARBA01' }
+};
+
+function resolveRole(email){
+  var u = MAINT_USERS[(email||'').toLowerCase()];
+  return u ? u : null;
+}
+
+function canDo(action){
+  var r = session.role;
+  switch(action){
+    case 'crear':         return r==='operativo'||r==='planner'||r==='admin';
+    case 'verTodas':      return r!=='operativo';
+    case 'asignarTurno':  return r==='tl'||r==='planner'||r==='admin';
+    case 'cambiarEstado': return r!=='operativo';
+    case 'comentMant':    return r==='tecnico'||r==='planner'||r==='admin';
+    case 'fechas':        return r==='tecnico'||r==='planner'||r==='admin';
+    case 'planificacion': return r==='planner'||r==='admin';
+    case 'rechazo':       return r==='planner'||r==='admin';
+    case 'material':      return r==='tecnico'||r==='planner'||r==='admin';
+    default: return false;
+  }
+}
+
+function roleLabel(r){
+  return {planner:'Planner',tl:'TL',tecnico:'Técnico',admin:'Admin',operativo:'Operativo'}[r]||r;
+}
 
 /* In-memory cache of rows */
 var allRows = [];      // array of objects keyed by COLS
@@ -302,29 +362,37 @@ function detectEmail(){
 }
 
 /* ===== Login ===== */
-function selectRole(el,role){
-  var opts=document.querySelectorAll('.role-choice .opt');
-  for(var i=0;i<opts.length;i++) opts[i].classList.remove('active');
-  el.classList.add('active');
-  el.setAttribute('data-selected','1');
-  session._pendingRole = role;
-}
-function doLogin(){
-  var email = $('loginEmail').value.trim();
-  if(!email){ showAlert('Email requerido','Por favor ingresá tu email.'); return; }
+function startSession(email){
+  email = (email||'').toLowerCase().trim();
+  if(!email) return false;
+  var userData = resolveRole(email);
   session.email = email;
-  session.role = session._pendingRole || 'operativo';
+  session.role  = userData ? userData.permiso : 'operativo';
+  session.turno = userData ? userData.turno   : '';
+  session.site  = userData ? userData.site    : '';
   $('loginScreen').style.display='none';
   $('app').style.display='block';
   $('hdrEmail').textContent = session.email;
-  $('hdrRole').textContent = session.role==='mantenimiento'?'Mantenimiento':'Operativo';
+  $('hdrRole').textContent  = roleLabel(session.role);
   buildTabs();
   loadData(true);
+  return true;
+}
+function doLoginManual(){
+  var email = $('loginEmail') ? $('loginEmail').value.trim() : '';
+  if(!email){ showAlert('Email requerido','Por favor ingresá tu email corporativo.'); return; }
+  startSession(email);
+}
+function showLoginFallback(msg){
+  $('loginStatus').textContent = msg||'Ingresá tu email para continuar.';
+  $('loginFallback').style.display='block';
 }
 function logout(){
-  session.email=''; session.role=''; allRows=[];
+  session.email=''; session.role=''; session.turno=''; session.site=''; allRows=[];
   $('app').style.display='none';
   $('loginScreen').style.display='flex';
+  $('loginFallback').style.display='none';
+  $('loginStatus').textContent='Detectando usuario...';
 }
 
 /* ===== Tabs ===== */
@@ -332,8 +400,9 @@ var currentTab='';
 function buildTabs(){
   var tabs=$('tabs'); tabs.innerHTML='';
   var defs;
-  if(session.role==='mantenimiento'){
+  if(canDo('verTodas')){
     defs=[['todas','Todas las Solicitudes']];
+    if(canDo('crear')) defs.push(['nueva','Nueva Solicitud']);
   }else{
     defs=[['mis','Mis Solicitudes'],['nueva','Nueva Solicitud']];
   }
@@ -475,7 +544,7 @@ function cardHtml(r){
   if(img && img.indexOf('data:')===0) h+='<img class="thumb" src="'+esc(img)+'" alt="img">';
 
   h+='<div class="actions">';
-  if(session.role==='mantenimiento'){
+  if(canDo('verTodas')){
     h+='<button class="btn small" onclick="openManage(\''+esc(r['Id solicitud'])+'\')">Gestionar</button>';
   }
   h+='</div>';
@@ -606,16 +675,25 @@ function openManage(id){
   var r=findRow(id);
   if(!r){ showAlert('No encontrada','La solicitud no existe.'); return; }
   var h='<div class="modal"><h2>Gestionar #'+esc(id)+'</h2><p>'+esc(r['Equipo'])+' &middot; '+esc(r['Desvio/Solicitud'])+'</p>';
-  h+='<div class="field"><label>Estado</label><select id="m_estado">'+opt(OPTS.Estado,r['Estado'])+'</select></div>';
-  h+='<div class="field"><label>Turno responsable</label><select id="m_turno">'+opt(OPTS.Turno,r['Turno responsable'])+'</select></div>';
-  h+='<div class="field"><label>Fecha Planificación</label><input id="m_fplan" type="date" value="'+esc(r['Fecha Planificacion'])+'"></div>';
-  h+='<div class="field"><label>FechaHora inicio real</label><input id="m_ini" value="'+esc(r['FechaHora inicio real'])+'" placeholder="YYYY-MM-DD HH:MM"></div>';
-  h+='<div class="field"><label>FechaHora fin real</label><input id="m_fin" value="'+esc(r['FechaHora fin real'])+'" placeholder="YYYY-MM-DD HH:MM"></div>';
-  h+='<div class="field"><label>Comentario Mantenimiento</label><textarea id="m_com">'+esc(r['Comentario Mantenimiento'])+'</textarea></div>';
-  h+='<div class="field"><label>Material Pendiente</label><input id="m_mat" value="'+esc(r['Material Pendiente'])+'"></div>';
-  h+='<div class="field"><label>Comentario de Rechazo (si rechazás)</label><textarea id="m_rech">'+esc(r['Comentario de Rechazo'])+'</textarea></div>';
+  if(canDo('cambiarEstado'))
+    h+='<div class="field"><label>Estado</label><select id="m_estado">'+opt(OPTS.Estado,r['Estado'])+'</select></div>';
+  if(canDo('asignarTurno'))
+    h+='<div class="field"><label>Turno responsable</label><select id="m_turno">'+opt(OPTS.Turno,r['Turno responsable'])+'</select></div>';
+  if(canDo('planificacion'))
+    h+='<div class="field"><label>Fecha Planificación</label><input id="m_fplan" type="date" value="'+esc(r['Fecha Planificacion'])+'"></div>';
+  if(canDo('fechas')){
+    h+='<div class="field"><label>FechaHora inicio real</label><input id="m_ini" value="'+esc(r['FechaHora inicio real'])+'" placeholder="YYYY-MM-DD HH:MM"></div>';
+    h+='<div class="field"><label>FechaHora fin real</label><input id="m_fin" value="'+esc(r['FechaHora fin real'])+'" placeholder="YYYY-MM-DD HH:MM"></div>';
+  }
+  if(canDo('comentMant'))
+    h+='<div class="field"><label>Comentario Mantenimiento</label><textarea id="m_com">'+esc(r['Comentario Mantenimiento'])+'</textarea></div>';
+  if(canDo('material'))
+    h+='<div class="field"><label>Material Pendiente</label><input id="m_mat" value="'+esc(r['Material Pendiente'])+'"></div>';
+  if(canDo('rechazo'))
+    h+='<div class="field"><label>Comentario de Rechazo (si rechazás)</label><textarea id="m_rech">'+esc(r['Comentario de Rechazo'])+'</textarea></div>';
   h+='<div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Cerrar</button>';
-  h+='<button class="btn danger" onclick="rejectReq(\''+esc(id)+'\')">Rechazar</button>';
+  if(canDo('rechazo'))
+    h+='<button class="btn danger" onclick="rejectReq(\''+esc(id)+'\')">Rechazar</button>';
   h+='<button class="btn yellow" onclick="saveManage(\''+esc(id)+'\')">Guardar</button></div>';
   h+='</div>';
   openModal(h);
@@ -629,15 +707,17 @@ function rejectReq(id){
 function saveManage(id){
   var r=findRow(id);
   if(!r) return;
-  var estado=$('m_estado').value;
+  var estado = canDo('cambiarEstado') && $('m_estado') ? $('m_estado').value : r['Estado'];
   r['Estado']=estado;
-  r['Turno responsable']=$('m_turno').value;
-  r['Fecha Planificacion']=$('m_fplan').value;
-  r['FechaHora inicio real']=val('m_ini');
-  r['FechaHora fin real']=val('m_fin');
-  r['Comentario Mantenimiento']=val('m_com');
-  r['Material Pendiente']=val('m_mat');
-  r['Comentario de Rechazo']=val('m_rech');
+  if(canDo('asignarTurno') && $('m_turno'))   r['Turno responsable']=$('m_turno').value;
+  if(canDo('planificacion') && $('m_fplan'))  r['Fecha Planificacion']=$('m_fplan').value;
+  if(canDo('fechas')){
+    if($('m_ini')) r['FechaHora inicio real']=val('m_ini');
+    if($('m_fin')) r['FechaHora fin real']=val('m_fin');
+  }
+  if(canDo('comentMant') && $('m_com'))  r['Comentario Mantenimiento']=val('m_com');
+  if(canDo('material') && $('m_mat'))    r['Material Pendiente']=val('m_mat');
+  if(canDo('rechazo') && $('m_rech'))    r['Comentario de Rechazo']=val('m_rech');
   if(estado==='En proceso' && !r['FechaHora inicio real']) r['FechaHora inicio real']=nowStr();
   if((estado==='Finalizada'||estado==='D-Finalizada') && !r['FechaHora fin real']) r['FechaHora fin real']=nowStr();
 
@@ -681,8 +761,25 @@ function toast(msg){
 /* ===== Boot ===== */
 (function(){
   initGrid();
-  var em=detectEmail();
-  if(em){ $('loginEmail').value=em; }
+  // Try to get email from Grid SDK synchronously
+  var em = detectEmail();
+  if(em){
+    startSession(em);
+    return;
+  }
+  // Try async Grid.getUser() if available
+  try{
+    if(Grid && typeof Grid.getUser === 'function'){
+      Grid.getUser().then(function(u){
+        var email = (u && (u.email || u.mail || u.username)) || '';
+        if(email){ startSession(email); }
+        else { showLoginFallback('No se pudo detectar el usuario automáticamente.'); }
+      }).catch(function(){ showLoginFallback('No se pudo detectar el usuario automáticamente.'); });
+      return;
+    }
+  }catch(e){}
+  // Fallback: show manual email input
+  showLoginFallback('Ingresá tu email para continuar.');
 })();
 </script>
 </body>
