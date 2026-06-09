@@ -773,9 +773,17 @@ function toast(msg){
 /* ===== Boot ===== */
 (function(){
   initGrid();
-  var saved = loadEmail();
-  if(saved){ startSession(saved); return; }
-  showLoginFallback('Ingresá tu email para continuar.');
+  var attempts = 0;
+  function tryBoot(){
+    var stateReady = window.GRID && window.GRID.state && typeof window.GRID.state.get === 'function';
+    if(!stateReady){
+      if(++attempts < 20){ setTimeout(tryBoot, 200); return; }
+    }
+    var saved = loadEmail();
+    if(saved){ startSession(saved); return; }
+    showLoginFallback('Ingresá tu email para continuar.');
+  }
+  tryBoot();
 })();
 
 </script>
