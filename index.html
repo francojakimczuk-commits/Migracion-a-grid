@@ -439,23 +439,20 @@ function switchTab(t,btn){
 }
 
 /* ===== Data load ===== */
+var READ_URL = 'https://web.furycloud.io/api/proxy/verdi_flows/webhook/38d274bb-eedb-4deb-9acc-8047b1e0168d';
+
 function loadData(showSpin){
   if(showSpin) renderSpinner();
-  Grid.sheets.get(SPREADSHEET_ID, RANGE).then(function(res){
-    var values = (res && res.values) ? res.values : (Array.isArray(res)?res:[]);
-    headerRow = values.length?values[0]:COLS.slice();
-    allRows=[];
-    for(var r=1;r<values.length;r++){
-      var row=values[r];
-      if(!row || (row.join('')==='')) continue;
-      var obj={ _rowIndex: r+1 };
-      for(var c=0;c<COLS.length;c++){ obj[COLS[c]] = row[c]!=null?row[c]:''; }
-      allRows.push(obj);
-    }
-    render();
-  }).catch(function(err){
-    $('viewArea').innerHTML='<div class="empty">No se pudieron cargar las solicitudes.<br><small>'+esc(err&&err.message||err)+'</small></div>';
-  });
+  fetch(READ_URL, { mode:'cors', credentials:'include' })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      allRows = Array.isArray(data) ? data : [];
+      allRows.forEach(function(r,i){ r._rowIndex = r.row_number || (i+2); });
+      render();
+    })
+    .catch(function(err){
+      $('viewArea').innerHTML='<div class="empty">No se pudieron cargar las solicitudes.<br><small>'+esc(String(err))+'</small></div>';
+    });
 }
 
 /* ===== Render ===== */
