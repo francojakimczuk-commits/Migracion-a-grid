@@ -353,24 +353,7 @@ function initGrid(){
     console.error('[Grid] init error',e);
   }
 }
-function detectEmail(){
-  try{
-    var props=[];
-    for(var k in Grid){ try{ props.push(k+'='+typeof Grid[k]); }catch(e){} }
-    console.log('[Grid] props:', props.join(', '));
-    var checks=['email','user','session','auth','currentUser','me','profile','account','userInfo','config'];
-    checks.forEach(function(k){
-      try{ if(Grid[k]!==undefined) console.log('[Grid] '+k+':', Grid[k]); }catch(e){}
-    });
-    if(Grid.session && Grid.session.email) return Grid.session.email;
-    if(Grid.user    && Grid.user.email)    return Grid.user.email;
-    if(Grid.auth    && Grid.auth.email)    return Grid.auth.email;
-    if(Grid.email)                         return Grid.email;
-    if(Grid.me      && Grid.me.email)      return Grid.me.email;
-    if(Grid.config  && Grid.config.email)  return Grid.config.email;
-  }catch(e){ console.error('[Grid] detectEmail error:', e); }
-  return '';
-}
+function detectEmail(){ return ''; }
 
 /* ===== Login ===== */
 function startSession(email){
@@ -772,57 +755,8 @@ function toast(msg){
 /* ===== Boot ===== */
 (function(){
   initGrid();
-  // Try to get email from Grid SDK synchronously
-  var em = detectEmail();
-  if(em){
-    startSession(em);
-    return;
-  }
-  // Try Grid.query for user info with multiple param styles
-  try{
-    var queries = [
-      {resource:'user'}, {type:'user'}, {resource:'session'}, {resource:'me'},
-      'user', 'session', 'me', undefined
-    ];
-    var tried = 0;
-    function tryQuery(i){
-      if(i >= queries.length){ listenParentMessage(); return; }
-      try{
-        var qr = Grid.query(queries[i]);
-        console.log('[Grid] query('+JSON.stringify(queries[i])+') sync:', qr);
-        if(qr && typeof qr.then === 'function'){
-          qr.then(function(u){
-            console.log('[Grid] query('+JSON.stringify(queries[i])+') async:', u);
-            var email = u && (u.email||u.mail||u.username||'');
-            if(email){ startSession(email); } else { tryQuery(i+1); }
-          }).catch(function(e){ console.log('[Grid] query err:', e); tryQuery(i+1); });
-        } else {
-          var email = qr && (qr.email||qr.mail||qr.username||'');
-          if(email){ startSession(email); } else { tryQuery(i+1); }
-        }
-      }catch(e){ console.log('[Grid] query('+i+') threw:', e); tryQuery(i+1); }
-    }
-    tryQuery(0);
-    return;
-  }catch(e){ console.error('[Grid] query block error:', e); }
-  listenParentMessage();
+  showLoginFallback('Ingresá tu email para continuar.');
 })();
-
-function listenParentMessage(){
-  var timeout = setTimeout(function(){ showLoginFallback('Ingresá tu email para continuar.'); }, 2000);
-  window.addEventListener('message', function handler(e){
-    console.log('[postMessage]', e.origin, e.data);
-    var d = e.data;
-    var email = d && (d.email || d.mail || (d.user && d.user.email) || (d.session && d.session.email) || '');
-    if(email){
-      clearTimeout(timeout);
-      window.removeEventListener('message', handler);
-      startSession(email);
-    }
-  });
-  // Ask parent for user info
-  try{ window.parent.postMessage({type:'getUser'}, '*'); }catch(e){}
-}
 
 </script>
 </body>
