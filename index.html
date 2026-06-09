@@ -443,16 +443,32 @@ var READ_URL = 'https://web.furycloud.io/api/proxy/verdi_flows/webhook/38d274bb-
 
 function loadData(showSpin){
   if(showSpin) renderSpinner();
-  fetch(READ_URL, { credentials:'include' })
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      allRows = Array.isArray(data) ? data : [];
-      allRows.forEach(function(r,i){ r._rowIndex = r.row_number || (i+2); });
-      render();
-    })
-    .catch(function(err){
-      $('viewArea').innerHTML='<div class="empty">No se pudieron cargar las solicitudes.<br><small>'+esc(String(err))+'</small></div>';
-    });
+  var cb = '_edilicio' + Date.now();
+  var timer = setTimeout(function(){
+    cleanupJsonp(cb);
+    $('viewArea').innerHTML='<div class="empty">No se pudieron cargar las solicitudes.<br><small>Timeout</small></div>';
+  }, 15000);
+  window[cb] = function(data){
+    clearTimeout(timer);
+    cleanupJsonp(cb);
+    allRows = Array.isArray(data) ? data : [];
+    allRows.forEach(function(r,i){ r._rowIndex = r.row_number || (i+2); });
+    render();
+  };
+  var s = document.createElement('script');
+  s.id = '_jsonp';
+  s.onerror = function(){
+    clearTimeout(timer);
+    cleanupJsonp(cb);
+    $('viewArea').innerHTML='<div class="empty">No se pudieron cargar las solicitudes.</div>';
+  };
+  s.src = READ_URL + '?cb=' + cb;
+  document.body.appendChild(s);
+}
+function cleanupJsonp(cb){
+  delete window[cb];
+  var s = document.getElementById('_jsonp');
+  if(s) s.parentNode.removeChild(s);
 }
 
 /* ===== Render ===== */
