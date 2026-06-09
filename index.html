@@ -355,9 +355,15 @@ function initGrid(){
 }
 function detectEmail(){
   try{
+    console.log('[Grid] Keys:', Object.keys(Grid));
+    console.log('[Grid] Full:', JSON.stringify(Grid, function(k,v){ return typeof v==='function'?'[fn]':v; }));
+    if(Grid.session) console.log('[Grid] session:', JSON.stringify(Grid.session));
+    if(Grid.user)    console.log('[Grid] user:', JSON.stringify(Grid.user));
+    if(Grid.auth)    console.log('[Grid] auth:', JSON.stringify(Grid.auth));
     if(Grid && Grid.session && Grid.session.email) return Grid.session.email;
     if(Grid && Grid.user && Grid.user.email) return Grid.user.email;
-  }catch(e){}
+    if(Grid && Grid.auth && Grid.auth.email) return Grid.auth.email;
+  }catch(e){ console.error('[Grid] detectEmail error:', e); }
   return '';
 }
 
