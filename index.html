@@ -364,6 +364,7 @@ function startSession(email){
   session.role  = userData ? userData.permiso : 'operativo';
   session.turno = userData ? userData.turno   : '';
   session.site  = userData ? userData.site    : '';
+  try{ localStorage.setItem('edilicio_email', email); }catch(e){}
   $('loginScreen').style.display='none';
   $('app').style.display='block';
   $('hdrEmail').textContent = session.email;
@@ -382,11 +383,13 @@ function showLoginFallback(msg){
   $('loginFallback').style.display='block';
 }
 function logout(){
+  try{ localStorage.removeItem('edilicio_email'); }catch(e){}
   session.email=''; session.role=''; session.turno=''; session.site=''; allRows=[];
   $('app').style.display='none';
   $('loginScreen').style.display='flex';
   $('loginFallback').style.display='none';
-  $('loginStatus').textContent='Detectando usuario...';
+  $('loginStatus').textContent='';
+  showLoginFallback('Ingresá tu email para continuar.');
 }
 
 /* ===== Tabs ===== */
@@ -755,6 +758,10 @@ function toast(msg){
 /* ===== Boot ===== */
 (function(){
   initGrid();
+  try{
+    var saved = localStorage.getItem('edilicio_email');
+    if(saved){ startSession(saved); return; }
+  }catch(e){}
   showLoginFallback('Ingresá tu email para continuar.');
 })();
 
