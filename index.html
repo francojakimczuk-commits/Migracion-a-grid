@@ -224,7 +224,7 @@
 "use strict";
 
 /* ===== Config ===== */
-var SPREADSHEET_ID = '1RrTWra9E5xvJDWh2-owhz2yIuvqE9cDFa1r1YeY3lIY';
+var SPREADSHEET_ID = '1xhMdMRkYZxkpZA8iPOWNN4YpjdKmXFwV4bE8Mr--eis';
 var SHEET = 'Solicitudes';
 var RANGE = SHEET + '!A1:AE10000';
 var APPEND_RANGE = SHEET + '!A:AE';
@@ -583,21 +583,17 @@ function submitForm(){
   var rowArr=COLS.map(function(c){return data[c]!=null?data[c]:'';});
 
   var overlay=showSpinnerModal('Guardando solicitud...');
-  fetch('https://web.furycloud.io/api/proxy/verdi_flows/webhook/a7376f15-cdb8-46c6-997b-e8d2246d724b',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(data)
-  }).then(function(r){
-    if(!r.ok) throw new Error('HTTP '+r.status);
+  Grid.sheets.append(SPREADSHEET_ID, APPEND_RANGE, [rowArr]).then(function(){
     closeModal();
     toast('Solicitud #'+id+' creada');
     if(session.role!=='mantenimiento'){
       var tabBtns=document.querySelectorAll('.tab');
       switchTab('mis',tabBtns[0]);
     }
+    loadData(false);
   }).catch(function(err){
     closeModal();
-    showAlert('Error','No se pudo guardar la solicitud: '+esc(err&&err.message||String(err)));
+    showAlert('Error','No se pudo guardar: '+esc(JSON.stringify(err)));
   });
 }
 
