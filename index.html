@@ -778,20 +778,33 @@ function toast(msg){
     startSession(em);
     return;
   }
-  // Try Grid.query for user info
+  // Try Grid.query for user info with multiple param styles
   try{
-    if(typeof Grid.query === 'function'){
-      var qr = Grid.query({resource:'user'});
-      if(qr && typeof qr.then === 'function'){
-        qr.then(function(u){
-          console.log('[Grid] query user:', u);
-          var email = u && (u.email||u.mail||u.username||'');
-          if(email){ startSession(email); } else { listenParentMessage(); }
-        }).catch(function(){ listenParentMessage(); });
-        return;
-      }
+    var queries = [
+      {resource:'user'}, {type:'user'}, {resource:'session'}, {resource:'me'},
+      'user', 'session', 'me', undefined
+    ];
+    var tried = 0;
+    function tryQuery(i){
+      if(i >= queries.length){ listenParentMessage(); return; }
+      try{
+        var qr = Grid.query(queries[i]);
+        console.log('[Grid] query('+JSON.stringify(queries[i])+') sync:', qr);
+        if(qr && typeof qr.then === 'function'){
+          qr.then(function(u){
+            console.log('[Grid] query('+JSON.stringify(queries[i])+') async:', u);
+            var email = u && (u.email||u.mail||u.username||'');
+            if(email){ startSession(email); } else { tryQuery(i+1); }
+          }).catch(function(e){ console.log('[Grid] query err:', e); tryQuery(i+1); });
+        } else {
+          var email = qr && (qr.email||qr.mail||qr.username||'');
+          if(email){ startSession(email); } else { tryQuery(i+1); }
+        }
+      }catch(e){ console.log('[Grid] query('+i+') threw:', e); tryQuery(i+1); }
     }
-  }catch(e){ console.error('[Grid] query error:', e); }
+    tryQuery(0);
+    return;
+  }catch(e){ console.error('[Grid] query block error:', e); }
   listenParentMessage();
 })();
 
