@@ -583,20 +583,20 @@ function submitForm(){
   var rowArr=COLS.map(function(c){return data[c]!=null?data[c]:'';});
 
   var overlay=showSpinnerModal('Guardando solicitud...');
-  fetch('https://api.mercadolibre.com/workspace/genai/verdi-flows/webhook/a7376f15-cdb8-46c6-997b-e8d2246d724b/external',{
+  fetch('https://verdi-flows.melisystems.com/webhook/a7376f15-cdb8-46c6-997b-e8d2246d724b',{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    mode:'no-cors',
     body:JSON.stringify(data)
-  }).then(function(r){
+  }).then(function(){
     closeModal();
-    toast('Solicitud #'+id+' enviada (status '+r.status+')');
+    toast('Solicitud #'+id+' creada');
     if(session.role!=='mantenimiento'){
       var tabBtns=document.querySelectorAll('.tab');
       switchTab('mis',tabBtns[0]);
     }
   }).catch(function(err){
     closeModal();
-    showAlert('Error CORS/Red',esc(err&&err.message||String(err)));
+    showAlert('Error',esc(err&&err.message||String(err)));
   });
 }
 
