@@ -356,24 +356,9 @@ function initGrid(){
 function detectEmail(){ return ''; }
 
 /* ===== Login ===== */
-function saveEmail(email){
-  try{
-    if(window.GRID && window.GRID.state) window.GRID.state.email = email;
-    else localStorage.setItem('edilicio_email', email);
-  }catch(e){}
-}
-function loadEmail(){
-  try{
-    if(window.GRID && window.GRID.state && window.GRID.state.email) return window.GRID.state.email;
-    return localStorage.getItem('edilicio_email')||'';
-  }catch(e){ return ''; }
-}
-function clearEmail(){
-  try{
-    if(window.GRID && window.GRID.state) delete window.GRID.state.email;
-    else localStorage.removeItem('edilicio_email');
-  }catch(e){}
-}
+function saveEmail(email){ gsSet('email', email); }
+function loadEmail(){ return gsGet('email')||''; }
+function clearEmail(){ gsSet('email',''); }
 function startSession(email){
   email = (email||'').toLowerCase().trim();
   if(!email) return false;
@@ -439,22 +424,32 @@ function switchTab(t,btn){
 }
 
 /* ===== Data load ===== */
-function getGridState(){
-  try{ return (window.GRID && window.GRID.state) ? window.GRID.state : null; }catch(e){ return null; }
+function gsGet(key){
+  try{
+    var s=window.GRID&&window.GRID.state;
+    if(!s) return undefined;
+    return typeof s.get==='function' ? s.get(key) : s[key];
+  }catch(e){ return undefined; }
+}
+function gsSet(key,val){
+  try{
+    var s=window.GRID&&window.GRID.state;
+    if(!s) return;
+    if(typeof s.set==='function') s.set(key,val); else s[key]=val;
+  }catch(e){}
 }
 function loadData(showSpin){
   if(showSpin) renderSpinner();
-  var state = getGridState();
-  var rows = (state && Array.isArray(state.solicitudes)) ? state.solicitudes : [];
-  allRows = rows;
+  var rows = gsGet('solicitudes');
+  allRows = Array.isArray(rows) ? rows : [];
   render();
 }
 function saveToState(row){
   try{
-    var state = getGridState();
-    if(!state) return;
-    if(!Array.isArray(state.solicitudes)) state.solicitudes = [];
-    state.solicitudes.push(row);
+    var arr = gsGet('solicitudes');
+    if(!Array.isArray(arr)) arr=[];
+    arr.push(row);
+    gsSet('solicitudes', arr);
   }catch(e){}
 }
 
