@@ -443,7 +443,7 @@ var READ_URL = 'https://web.furycloud.io/api/proxy/verdi_flows/webhook/38d274bb-
 
 function loadData(showSpin){
   if(showSpin) renderSpinner();
-  fetch(READ_URL, { mode:'cors', credentials:'include' })
+  fetch(READ_URL)
     .then(function(r){ return r.json(); })
     .then(function(data){
       allRows = Array.isArray(data) ? data : [];
