@@ -778,35 +778,37 @@ function toast(msg){
     startSession(em);
     return;
   }
-  // Try async Grid SDK methods
+  // Try Grid.query for user info
   try{
-    var gridAsync = null;
-    if(typeof Grid.getUser === 'function')     gridAsync = Grid.getUser();
-    else if(typeof Grid.getMe === 'function')   gridAsync = Grid.getMe();
-    else if(typeof Grid.getUserInfo === 'function') gridAsync = Grid.getUserInfo();
-    if(gridAsync){
-      gridAsync.then(function(u){
-        console.log('[Grid] async user:', u);
-        var email = u && (u.email || u.mail || u.username || '');
-        if(email){ startSession(email); }
-        else { tryMeliApi(); }
-      }).catch(function(e){ console.error('[Grid] async user error:', e); tryMeliApi(); });
-      return;
+    if(typeof Grid.query === 'function'){
+      var qr = Grid.query({resource:'user'});
+      if(qr && typeof qr.then === 'function'){
+        qr.then(function(u){
+          console.log('[Grid] query user:', u);
+          var email = u && (u.email||u.mail||u.username||'');
+          if(email){ startSession(email); } else { listenParentMessage(); }
+        }).catch(function(){ listenParentMessage(); });
+        return;
+      }
     }
-  }catch(e){ console.error('[Grid] async error:', e); }
-  tryMeliApi();
+  }catch(e){ console.error('[Grid] query error:', e); }
+  listenParentMessage();
 })();
 
-function tryMeliApi(){
-  fetch('https://api.mercadolibre.com/users/me', { credentials:'include' })
-    .then(function(r){ return r.json(); })
-    .then(function(u){
-      console.log('[MELI] /users/me:', u);
-      var email = u && (u.email || (u.identification && u.identification.email) || '');
-      if(email){ startSession(email); }
-      else { showLoginFallback('Ingresá tu email para continuar.'); }
-    })
-    .catch(function(e){ console.error('[MELI] /users/me error:', e); showLoginFallback('Ingresá tu email para continuar.'); });
+function listenParentMessage(){
+  var timeout = setTimeout(function(){ showLoginFallback('Ingresá tu email para continuar.'); }, 2000);
+  window.addEventListener('message', function handler(e){
+    console.log('[postMessage]', e.origin, e.data);
+    var d = e.data;
+    var email = d && (d.email || d.mail || (d.user && d.user.email) || (d.session && d.session.email) || '');
+    if(email){
+      clearTimeout(timeout);
+      window.removeEventListener('message', handler);
+      startSession(email);
+    }
+  });
+  // Ask parent for user info
+  try{ window.parent.postMessage({type:'getUser'}, '*'); }catch(e){}
 }
 
 </script>
