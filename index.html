@@ -355,14 +355,19 @@ function initGrid(){
 }
 function detectEmail(){
   try{
-    console.log('[Grid] Keys:', Object.keys(Grid));
-    console.log('[Grid] Full:', JSON.stringify(Grid, function(k,v){ return typeof v==='function'?'[fn]':v; }));
-    if(Grid.session) console.log('[Grid] session:', JSON.stringify(Grid.session));
-    if(Grid.user)    console.log('[Grid] user:', JSON.stringify(Grid.user));
-    if(Grid.auth)    console.log('[Grid] auth:', JSON.stringify(Grid.auth));
-    if(Grid && Grid.session && Grid.session.email) return Grid.session.email;
-    if(Grid && Grid.user && Grid.user.email) return Grid.user.email;
-    if(Grid && Grid.auth && Grid.auth.email) return Grid.auth.email;
+    var props=[];
+    for(var k in Grid){ try{ props.push(k+'='+typeof Grid[k]); }catch(e){} }
+    console.log('[Grid] props:', props.join(', '));
+    var checks=['email','user','session','auth','currentUser','me','profile','account','userInfo','config'];
+    checks.forEach(function(k){
+      try{ if(Grid[k]!==undefined) console.log('[Grid] '+k+':', Grid[k]); }catch(e){}
+    });
+    if(Grid.session && Grid.session.email) return Grid.session.email;
+    if(Grid.user    && Grid.user.email)    return Grid.user.email;
+    if(Grid.auth    && Grid.auth.email)    return Grid.auth.email;
+    if(Grid.email)                         return Grid.email;
+    if(Grid.me      && Grid.me.email)      return Grid.me.email;
+    if(Grid.config  && Grid.config.email)  return Grid.config.email;
   }catch(e){ console.error('[Grid] detectEmail error:', e); }
   return '';
 }
@@ -773,20 +778,37 @@ function toast(msg){
     startSession(em);
     return;
   }
-  // Try async Grid.getUser() if available
+  // Try async Grid SDK methods
   try{
-    if(Grid && typeof Grid.getUser === 'function'){
-      Grid.getUser().then(function(u){
-        var email = (u && (u.email || u.mail || u.username)) || '';
+    var gridAsync = null;
+    if(typeof Grid.getUser === 'function')     gridAsync = Grid.getUser();
+    else if(typeof Grid.getMe === 'function')   gridAsync = Grid.getMe();
+    else if(typeof Grid.getUserInfo === 'function') gridAsync = Grid.getUserInfo();
+    if(gridAsync){
+      gridAsync.then(function(u){
+        console.log('[Grid] async user:', u);
+        var email = u && (u.email || u.mail || u.username || '');
         if(email){ startSession(email); }
-        else { showLoginFallback('No se pudo detectar el usuario automáticamente.'); }
-      }).catch(function(){ showLoginFallback('No se pudo detectar el usuario automáticamente.'); });
+        else { tryMeliApi(); }
+      }).catch(function(e){ console.error('[Grid] async user error:', e); tryMeliApi(); });
       return;
     }
-  }catch(e){}
-  // Fallback: show manual email input
-  showLoginFallback('Ingresá tu email para continuar.');
+  }catch(e){ console.error('[Grid] async error:', e); }
+  tryMeliApi();
 })();
+
+function tryMeliApi(){
+  fetch('https://api.mercadolibre.com/users/me', { credentials:'include' })
+    .then(function(r){ return r.json(); })
+    .then(function(u){
+      console.log('[MELI] /users/me:', u);
+      var email = u && (u.email || (u.identification && u.identification.email) || '');
+      if(email){ startSession(email); }
+      else { showLoginFallback('Ingresá tu email para continuar.'); }
+    })
+    .catch(function(e){ console.error('[MELI] /users/me error:', e); showLoginFallback('Ingresá tu email para continuar.'); });
+}
+
 </script>
 </body>
 </html>
