@@ -356,6 +356,24 @@ function initGrid(){
 function detectEmail(){ return ''; }
 
 /* ===== Login ===== */
+function saveEmail(email){
+  try{
+    if(window.GRID && window.GRID.state) window.GRID.state.email = email;
+    else localStorage.setItem('edilicio_email', email);
+  }catch(e){}
+}
+function loadEmail(){
+  try{
+    if(window.GRID && window.GRID.state && window.GRID.state.email) return window.GRID.state.email;
+    return localStorage.getItem('edilicio_email')||'';
+  }catch(e){ return ''; }
+}
+function clearEmail(){
+  try{
+    if(window.GRID && window.GRID.state) delete window.GRID.state.email;
+    else localStorage.removeItem('edilicio_email');
+  }catch(e){}
+}
 function startSession(email){
   email = (email||'').toLowerCase().trim();
   if(!email) return false;
@@ -364,7 +382,7 @@ function startSession(email){
   session.role  = userData ? userData.permiso : 'operativo';
   session.turno = userData ? userData.turno   : '';
   session.site  = userData ? userData.site    : '';
-  try{ localStorage.setItem('edilicio_email', email); }catch(e){}
+  saveEmail(email);
   $('loginScreen').style.display='none';
   $('app').style.display='block';
   $('hdrEmail').textContent = session.email;
@@ -383,7 +401,7 @@ function showLoginFallback(msg){
   $('loginFallback').style.display='block';
 }
 function logout(){
-  try{ localStorage.removeItem('edilicio_email'); }catch(e){}
+  clearEmail();
   session.email=''; session.role=''; session.turno=''; session.site=''; allRows=[];
   $('app').style.display='none';
   $('loginScreen').style.display='flex';
@@ -758,10 +776,8 @@ function toast(msg){
 /* ===== Boot ===== */
 (function(){
   initGrid();
-  try{
-    var saved = localStorage.getItem('edilicio_email');
-    if(saved){ startSession(saved); return; }
-  }catch(e){}
+  var saved = loadEmail();
+  if(saved){ startSession(saved); return; }
   showLoginFallback('Ingresá tu email para continuar.');
 })();
 
