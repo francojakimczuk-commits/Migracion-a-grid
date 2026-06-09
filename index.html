@@ -583,9 +583,9 @@ function submitForm(){
   var rowArr=COLS.map(function(c){return data[c]!=null?data[c]:'';});
 
   var overlay=showSpinnerModal('Guardando solicitud...');
-  fetch('https://api.mercadolibre.com/workspace/genai/verdi-flows/webhook/a7376f15-cdb8-46c6-997b-e8d2246d724b/external',{
+  fetch('https://verdi-flows.melisystems.com/webhook/a7376f15-cdb8-46c6-997b-e8d2246d724b',{
     method:'POST',
-    headers:{'Content-Type':'application/json','x-api-key':'edilicio2024'},
+    headers:{'Content-Type':'application/json'},
     body:JSON.stringify(data)
   }).then(function(r){
     if(!r.ok) throw new Error('HTTP '+r.status);
