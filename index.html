@@ -490,26 +490,17 @@ function tryGridQueries(variants, idx, onSuccess, onFail){
 
 function loadData(showSpin){
   if(showSpin) renderSpinner();
-  if(typeof Grid==='undefined'){ loadFromLocalStorage(); return; }
-  tryDataset(function(result){
-    parseQueryResult(result);
-  }, function(){
-    if(typeof Grid.query!=='function'){ loadFromLocalStorage(); return; }
-    var variants=[
-      [RANGE],[SHEET],
-      ['SELECT *',RANGE],['SELECT *',SHEET],
-      ['SELECT *',{spreadsheetId:SPREADSHEET_ID,range:RANGE}],
-      ['SELECT *',{spreadsheetId:SPREADSHEET_ID,sheet:SHEET}],
-      [{spreadsheetId:SPREADSHEET_ID,range:RANGE}],
-      [{range:RANGE}],[{sheet:SHEET}],['SELECT *']
-    ];
-    tryGridQueries(variants, 0, function(result){
-      parseQueryResult(result);
-    }, function(){
-      console.warn('[loadData] all Grid.query variants failed, using localStorage');
-      loadFromLocalStorage();
-    });
-  });
+  // GRID.state is server-backed and collaborative — primary source
+  var stateRows = gsGet('solicitudes');
+  console.log('[loadData] GRID.state solicitudes:', stateRows);
+  if(Array.isArray(stateRows) && stateRows.length > 0){
+    allRows = stateRows;
+    console.log('[loadData] loaded from GRID.state, rows='+allRows.length);
+    render();
+    return;
+  }
+  // Fallback: localStorage (current session only)
+  loadFromLocalStorage();
 }
 
 function parseQueryResult(result){
@@ -547,6 +538,15 @@ function loadFromLocalStorage(){
 
 function saveToState(row){
   try{
+    // Save to GRID.state (server-backed, shared between users)
+    var stateArr = gsGet('solicitudes');
+    if(!Array.isArray(stateArr)) stateArr=[];
+    stateArr.push(row);
+    gsSet('solicitudes', stateArr);
+    console.log('[saveToState] GRID.state saved, total='+stateArr.length);
+  }catch(e){ console.warn('[saveToState] GRID.state error',e); }
+  try{
+    // Also save to localStorage as backup
     var raw = localStorage.getItem('edilicio_solicitudes');
     var arr = raw ? JSON.parse(raw) : [];
     if(!Array.isArray(arr)) arr=[];
