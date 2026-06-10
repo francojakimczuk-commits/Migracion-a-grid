@@ -458,33 +458,45 @@ function rowArrToObj(arr){
   return obj;
 }
 
+function tryGridQueries(variants, idx, onSuccess, onFail){
+  if(idx >= variants.length){ onFail(); return; }
+  var v = variants[idx];
+  console.log('[loadData] trying variant', idx, JSON.stringify(v));
+  var p;
+  try{ p = Grid.query.apply(Grid, v); }catch(e){ tryGridQueries(variants,idx+1,onSuccess,onFail); return; }
+  if(!p||typeof p.then!=='function'){ tryGridQueries(variants,idx+1,onSuccess,onFail); return; }
+  p.then(function(r){
+    console.log('[loadData] variant',idx,'OK:', JSON.stringify(r).slice(0,300));
+    onSuccess(r);
+  }).catch(function(e){
+    console.warn('[loadData] variant',idx,'failed:', JSON.stringify(e));
+    tryGridQueries(variants,idx+1,onSuccess,onFail);
+  });
+}
+
 function loadData(showSpin){
   if(showSpin) renderSpinner();
-  try{
-    if(typeof Grid!=='undefined' && typeof Grid.query==='function'){
-      console.log('[loadData] trying Grid.query...');
-      Grid.query('SELECT *',{spreadsheetId:SPREADSHEET_ID,sheet:SHEET})
-        .then(function(result){
-          console.log('[loadData] Grid.query raw:', JSON.stringify(result).slice(0,300));
-          parseQueryResult(result);
-        })
-        .catch(function(e){
-          console.warn('[loadData] Grid.query(2arg) failed:', JSON.stringify(e));
-          // try without options
-          Grid.query('SELECT *')
-            .then(function(result){
-              console.log('[loadData] Grid.query(1arg) raw:', JSON.stringify(result).slice(0,300));
-              parseQueryResult(result);
-            })
-            .catch(function(e2){
-              console.warn('[loadData] Grid.query(1arg) failed:', JSON.stringify(e2));
-              loadFromLocalStorage();
-            });
-        });
-      return;
-    }
-  }catch(e){ console.warn('[loadData] Grid.query error:', e); }
-  loadFromLocalStorage();
+  if(typeof Grid==='undefined' || typeof Grid.query!=='function'){
+    loadFromLocalStorage(); return;
+  }
+  var variants = [
+    [RANGE],
+    [SHEET],
+    ['SELECT *', RANGE],
+    ['SELECT *', SHEET],
+    ['SELECT *', {spreadsheetId:SPREADSHEET_ID, range:RANGE}],
+    ['SELECT *', {spreadsheetId:SPREADSHEET_ID, sheet:SHEET}],
+    [{spreadsheetId:SPREADSHEET_ID, range:RANGE}],
+    [{range:RANGE}],
+    [{sheet:SHEET}],
+    ['SELECT *']
+  ];
+  tryGridQueries(variants, 0, function(result){
+    parseQueryResult(result);
+  }, function(){
+    console.warn('[loadData] all Grid.query variants failed, using localStorage');
+    loadFromLocalStorage();
+  });
 }
 
 function parseQueryResult(result){
