@@ -440,15 +440,26 @@ function gsGet(key){
   try{
     var s=window.GRID&&window.GRID.state;
     if(!s) return undefined;
-    return typeof s.get==='function' ? s.get(key) : s[key];
+    var result = typeof s.get==='function' ? s.get(key) : s[key];
+    // unwrap if stored as {data: [...]}
+    if(result && typeof result.then === 'function'){
+      return result.then(function(v){ return (v && v.data !== undefined) ? v.data : v; });
+    }
+    return (result && result.data !== undefined) ? result.data : result;
   }catch(e){ return undefined; }
 }
 function gsSet(key,val){
   try{
     var s=window.GRID&&window.GRID.state;
     if(!s) return;
-    if(typeof s.set==='function') s.set(key,val); else s[key]=val;
-  }catch(e){}
+    // wrap arrays in object since Grid state may require plain objects
+    var toStore = Array.isArray(val) ? {data: val} : val;
+    var p = typeof s.set==='function' ? s.set(key, toStore) : (s[key]=toStore);
+    if(p && typeof p.then === 'function'){
+      p.then(function(){ console.log('[gsSet] saved key='+key); })
+       .catch(function(e){ console.warn('[gsSet] error key='+key, e); });
+    }
+  }catch(e){ console.warn('[gsSet] exception', e); }
 }
 var COL_HEADERS = ['Id solicitud','Solicitante','Sector que pertenece','Area','Sector','Equipo','Parte del equipo','Desvio/Solicitud','Ubicacion (Calle)(Dock/Puesto/Calle)','Descripcion','Imagen','Video','Estado','Turno responsable','Fecha Planificada','Fecha Real de Ejecucion','Comentarios Mantenimiento','Prioridad','Materiales','Fecha Creacion'];
 
@@ -490,16 +501,30 @@ function tryGridQueries(variants, idx, onSuccess, onFail){
 
 function loadData(showSpin){
   if(showSpin) renderSpinner();
-  // GRID.state is server-backed and collaborative — primary source
-  var stateRows = gsGet('solicitudes');
-  console.log('[loadData] GRID.state solicitudes:', stateRows);
-  if(Array.isArray(stateRows) && stateRows.length > 0){
-    allRows = stateRows;
-    console.log('[loadData] loaded from GRID.state, rows='+allRows.length);
+  var stateVal = gsGet('solicitudes');
+  console.log('[loadData] GRID.state solicitudes:', stateVal);
+  if(stateVal && typeof stateVal.then === 'function'){
+    stateVal.then(function(rows){
+      console.log('[loadData] GRID.state resolved:', rows);
+      if(Array.isArray(rows) && rows.length > 0){
+        allRows = rows;
+        console.log('[loadData] loaded from GRID.state, rows='+allRows.length);
+        render();
+      } else {
+        loadFromLocalStorage();
+      }
+    }).catch(function(e){
+      console.warn('[loadData] GRID.state error', e);
+      loadFromLocalStorage();
+    });
+    return;
+  }
+  if(Array.isArray(stateVal) && stateVal.length > 0){
+    allRows = stateVal;
+    console.log('[loadData] loaded from GRID.state sync, rows='+allRows.length);
     render();
     return;
   }
-  // Fallback: localStorage (current session only)
   loadFromLocalStorage();
 }
 
@@ -537,22 +562,29 @@ function loadFromLocalStorage(){
 }
 
 function saveToState(row){
+  // Save to localStorage immediately
   try{
-    // Save to GRID.state (server-backed, shared between users)
-    var stateArr = gsGet('solicitudes');
-    if(!Array.isArray(stateArr)) stateArr=[];
-    stateArr.push(row);
-    gsSet('solicitudes', stateArr);
-    console.log('[saveToState] GRID.state saved, total='+stateArr.length);
-  }catch(e){ console.warn('[saveToState] GRID.state error',e); }
-  try{
-    // Also save to localStorage as backup
     var raw = localStorage.getItem('edilicio_solicitudes');
     var arr = raw ? JSON.parse(raw) : [];
     if(!Array.isArray(arr)) arr=[];
     arr.push(row);
     localStorage.setItem('edilicio_solicitudes', JSON.stringify(arr));
   }catch(e){}
+  // Save to GRID.state async
+  try{
+    var stateVal = gsGet('solicitudes');
+    var doSave = function(stateArr){
+      if(!Array.isArray(stateArr)) stateArr=[];
+      stateArr.push(row);
+      gsSet('solicitudes', stateArr);
+      console.log('[saveToState] GRID.state saved, total='+stateArr.length);
+    };
+    if(stateVal && typeof stateVal.then === 'function'){
+      stateVal.then(doSave).catch(function(){ doSave([]); });
+    } else {
+      doSave(Array.isArray(stateVal) ? stateVal : []);
+    }
+  }catch(e){ console.warn('[saveToState] GRID.state error',e); }
 }
 
 /* ===== Render ===== */
