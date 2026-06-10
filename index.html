@@ -458,6 +458,20 @@ function rowArrToObj(arr){
   return obj;
 }
 
+function tryDataset(onSuccess, onFail){
+  try{
+    if(typeof Grid==='undefined'||typeof Grid.dataset!=='function'){onFail();return;}
+    console.log('[loadData] trying Grid.dataset(0)...');
+    var ds=Grid.dataset(0);
+    console.log('[loadData] dataset(0) type='+typeof ds+' keys='+JSON.stringify(Object.keys(ds||{})));
+    if(ds&&typeof ds.get==='function'){
+      ds.get(RANGE).then(function(r){console.log('[loadData] dataset.get OK',JSON.stringify(r).slice(0,300));onSuccess(r);}).catch(function(e){console.warn('[loadData] dataset.get failed',e);onFail();});
+    }else if(ds&&typeof ds.query==='function'){
+      ds.query('SELECT *').then(function(r){console.log('[loadData] dataset.query OK',JSON.stringify(r).slice(0,300));onSuccess(r);}).catch(function(e){console.warn('[loadData] dataset.query failed',e);onFail();});
+    }else{console.warn('[loadData] dataset(0) has no get/query, value=',JSON.stringify(ds).slice(0,200));onFail();}
+  }catch(e){console.warn('[loadData] dataset error',e);onFail();}
+}
+
 function tryGridQueries(variants, idx, onSuccess, onFail){
   if(idx >= variants.length){ onFail(); return; }
   var v = variants[idx];
@@ -476,26 +490,25 @@ function tryGridQueries(variants, idx, onSuccess, onFail){
 
 function loadData(showSpin){
   if(showSpin) renderSpinner();
-  if(typeof Grid==='undefined' || typeof Grid.query!=='function'){
-    loadFromLocalStorage(); return;
-  }
-  var variants = [
-    [RANGE],
-    [SHEET],
-    ['SELECT *', RANGE],
-    ['SELECT *', SHEET],
-    ['SELECT *', {spreadsheetId:SPREADSHEET_ID, range:RANGE}],
-    ['SELECT *', {spreadsheetId:SPREADSHEET_ID, sheet:SHEET}],
-    [{spreadsheetId:SPREADSHEET_ID, range:RANGE}],
-    [{range:RANGE}],
-    [{sheet:SHEET}],
-    ['SELECT *']
-  ];
-  tryGridQueries(variants, 0, function(result){
+  if(typeof Grid==='undefined'){ loadFromLocalStorage(); return; }
+  tryDataset(function(result){
     parseQueryResult(result);
   }, function(){
-    console.warn('[loadData] all Grid.query variants failed, using localStorage');
-    loadFromLocalStorage();
+    if(typeof Grid.query!=='function'){ loadFromLocalStorage(); return; }
+    var variants=[
+      [RANGE],[SHEET],
+      ['SELECT *',RANGE],['SELECT *',SHEET],
+      ['SELECT *',{spreadsheetId:SPREADSHEET_ID,range:RANGE}],
+      ['SELECT *',{spreadsheetId:SPREADSHEET_ID,sheet:SHEET}],
+      [{spreadsheetId:SPREADSHEET_ID,range:RANGE}],
+      [{range:RANGE}],[{sheet:SHEET}],['SELECT *']
+    ];
+    tryGridQueries(variants, 0, function(result){
+      parseQueryResult(result);
+    }, function(){
+      console.warn('[loadData] all Grid.query variants failed, using localStorage');
+      loadFromLocalStorage();
+    });
   });
 }
 
