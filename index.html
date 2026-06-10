@@ -452,16 +452,20 @@ function gsSet(key,val){
 }
 function loadData(showSpin){
   if(showSpin) renderSpinner();
-  var rows = gsGet('solicitudes');
-  allRows = Array.isArray(rows) ? rows : [];
+  try{
+    var raw = localStorage.getItem('edilicio_solicitudes');
+    allRows = raw ? JSON.parse(raw) : [];
+    if(!Array.isArray(allRows)) allRows=[];
+  }catch(e){ allRows=[]; }
   render();
 }
 function saveToState(row){
   try{
-    var arr = gsGet('solicitudes');
+    var raw = localStorage.getItem('edilicio_solicitudes');
+    var arr = raw ? JSON.parse(raw) : [];
     if(!Array.isArray(arr)) arr=[];
     arr.push(row);
-    gsSet('solicitudes', arr);
+    localStorage.setItem('edilicio_solicitudes', JSON.stringify(arr));
   }catch(e){}
 }
 
