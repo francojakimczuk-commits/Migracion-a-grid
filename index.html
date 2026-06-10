@@ -356,9 +356,21 @@ function initGrid(){
 function detectEmail(){ return ''; }
 
 /* ===== Login ===== */
-function saveEmail(email){ gsSet('email', email); }
-function loadEmail(){ return gsGet('email')||''; }
-function clearEmail(){ gsSet('email',''); }
+function saveEmail(email){
+  try{ localStorage.setItem('edilicio_email', email); }catch(e){}
+  gsSet('email', email);
+}
+function loadEmail(){
+  try{
+    var e = localStorage.getItem('edilicio_email');
+    if(e) return e;
+  }catch(e2){}
+  return gsGet('email')||'';
+}
+function clearEmail(){
+  try{ localStorage.removeItem('edilicio_email'); }catch(e){}
+  gsSet('email','');
+}
 function startSession(email){
   email = (email||'').toLowerCase().trim();
   if(!email) return false;
@@ -773,17 +785,9 @@ function toast(msg){
 /* ===== Boot ===== */
 (function(){
   initGrid();
-  var attempts = 0;
-  function tryBoot(){
-    var stateReady = window.GRID && window.GRID.state && typeof window.GRID.state.get === 'function';
-    if(!stateReady){
-      if(++attempts < 20){ setTimeout(tryBoot, 200); return; }
-    }
-    var saved = loadEmail();
-    if(saved){ startSession(saved); return; }
-    showLoginFallback('Ingresá tu email para continuar.');
-  }
-  tryBoot();
+  var saved = loadEmail();
+  if(saved){ startSession(saved); return; }
+  showLoginFallback('Ingresá tu email para continuar.');
 })();
 
 </script>
