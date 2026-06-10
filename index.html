@@ -441,20 +441,28 @@ function gsGet(key){
     var s=window.GRID&&window.GRID.state;
     if(!s) return undefined;
     var result = typeof s.get==='function' ? s.get(key) : s[key];
-    // unwrap if stored as {data: [...]}
     if(result && typeof result.then === 'function'){
-      return result.then(function(v){ return (v && v.data !== undefined) ? v.data : v; });
+      // get() returns full state object {doc_id, state:{...}, updated_at}
+      return result.then(function(v){
+        if(v && v.state && v.state[key] !== undefined) return v.state[key];
+        if(v && v[key] !== undefined) return v[key];
+        return v;
+      });
     }
-    return (result && result.data !== undefined) ? result.data : result;
+    if(result && result.state && result.state[key] !== undefined) return result.state[key];
+    return result;
   }catch(e){ return undefined; }
 }
 function gsSet(key,val){
   try{
     var s=window.GRID&&window.GRID.state;
     if(!s) return;
-    // wrap arrays in object since Grid state may require plain objects
-    var toStore = Array.isArray(val) ? {data: val} : val;
-    var p = typeof s.set==='function' ? s.set(key, toStore) : (s[key]=toStore);
+    var patch = {};
+    patch[key] = val;
+    // prefer patch() over set() for partial updates
+    var fn = typeof s.patch==='function' ? s.patch.bind(s) : (typeof s.set==='function' ? function(obj){ return s.set(key, obj[key]); } : null);
+    if(!fn){ s[key]=val; return; }
+    var p = fn(patch);
     if(p && typeof p.then === 'function'){
       p.then(function(){ console.log('[gsSet] saved key='+key); })
        .catch(function(e){ console.warn('[gsSet] error key='+key, e); });
