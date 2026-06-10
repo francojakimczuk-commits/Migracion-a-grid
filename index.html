@@ -460,27 +460,55 @@ function rowArrToObj(arr){
 
 function loadData(showSpin){
   if(showSpin) renderSpinner();
-  var gvizUrl = 'https://docs.google.com/spreadsheets/d/'+SPREADSHEET_ID
-    +'/gviz/tq?tqx=out:json&sheet='+encodeURIComponent(SHEET)+'&t='+Date.now();
-  fetch(gvizUrl, {credentials:'include'})
-    .then(function(r){ return r.text(); })
-    .then(function(text){
-      var match = text.match(/setResponse\(([\s\S]*)\)/);
-      if(!match) throw new Error('gviz parse fail');
-      var data = JSON.parse(match[1]);
-      var cols = (data.table.cols||[]).map(function(c){ return c.label||c.id||''; });
-      allRows = (data.table.rows||[]).filter(function(r){ return r&&r.c&&r.c[0]&&r.c[0].v; }).map(function(r){
+  try{
+    if(typeof Grid!=='undefined' && typeof Grid.query==='function'){
+      console.log('[loadData] trying Grid.query...');
+      Grid.query('SELECT *',{spreadsheetId:SPREADSHEET_ID,sheet:SHEET})
+        .then(function(result){
+          console.log('[loadData] Grid.query raw:', JSON.stringify(result).slice(0,300));
+          parseQueryResult(result);
+        })
+        .catch(function(e){
+          console.warn('[loadData] Grid.query(2arg) failed:', JSON.stringify(e));
+          // try without options
+          Grid.query('SELECT *')
+            .then(function(result){
+              console.log('[loadData] Grid.query(1arg) raw:', JSON.stringify(result).slice(0,300));
+              parseQueryResult(result);
+            })
+            .catch(function(e2){
+              console.warn('[loadData] Grid.query(1arg) failed:', JSON.stringify(e2));
+              loadFromLocalStorage();
+            });
+        });
+      return;
+    }
+  }catch(e){ console.warn('[loadData] Grid.query error:', e); }
+  loadFromLocalStorage();
+}
+
+function parseQueryResult(result){
+  try{
+    // result may be array of arrays, array of objects, or {values:[][], rows:[]}
+    var rows;
+    if(result && result.values) rows = result.values;
+    else if(Array.isArray(result)) rows = result;
+    else { loadFromLocalStorage(); return; }
+
+    if(rows.length > 1){
+      var headers = rows[0];
+      allRows = rows.slice(1).filter(function(r){ return r[0]; }).map(function(r){
         var obj={};
-        cols.forEach(function(col,i){ obj[col]=r.c[i]&&r.c[i].v!=null?String(r.c[i].v):''; });
+        headers.forEach(function(h,i){ obj[h]=r[i]!=null?String(r[i]):''; });
         return obj;
       });
-      console.log('[loadData] gviz OK, rows='+allRows.length);
-      render();
-    })
-    .catch(function(e){
-      console.warn('[loadData] gviz failed, using localStorage', e);
-      loadFromLocalStorage();
-    });
+    } else { allRows=[]; }
+    console.log('[loadData] parsed rows='+allRows.length);
+    render();
+  }catch(e){
+    console.warn('[loadData] parseQueryResult error:', e);
+    loadFromLocalStorage();
+  }
 }
 
 function loadFromLocalStorage(){
