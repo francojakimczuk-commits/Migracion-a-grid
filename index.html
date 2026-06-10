@@ -450,8 +450,40 @@ function gsSet(key,val){
     if(typeof s.set==='function') s.set(key,val); else s[key]=val;
   }catch(e){}
 }
+var COL_HEADERS = ['Id solicitud','Solicitante','Sector que pertenece','Area','Sector','Equipo','Parte del equipo','Desvio/Solicitud','Ubicacion (Calle)(Dock/Puesto/Calle)','Descripcion','Imagen','Video','Estado','Turno responsable','Fecha Planificada','Fecha Real de Ejecucion','Comentarios Mantenimiento','Prioridad','Materiales','Fecha Creacion'];
+
+function rowArrToObj(arr){
+  var obj={};
+  COL_HEADERS.forEach(function(h,i){ obj[h]=arr[i]!=null?String(arr[i]):''; });
+  return obj;
+}
+
 function loadData(showSpin){
   if(showSpin) renderSpinner();
+  var gvizUrl = 'https://docs.google.com/spreadsheets/d/'+SPREADSHEET_ID
+    +'/gviz/tq?tqx=out:json&sheet='+encodeURIComponent(SHEET)+'&t='+Date.now();
+  fetch(gvizUrl, {credentials:'include'})
+    .then(function(r){ return r.text(); })
+    .then(function(text){
+      var match = text.match(/setResponse\(([\s\S]*)\)/);
+      if(!match) throw new Error('gviz parse fail');
+      var data = JSON.parse(match[1]);
+      var cols = (data.table.cols||[]).map(function(c){ return c.label||c.id||''; });
+      allRows = (data.table.rows||[]).filter(function(r){ return r&&r.c&&r.c[0]&&r.c[0].v; }).map(function(r){
+        var obj={};
+        cols.forEach(function(col,i){ obj[col]=r.c[i]&&r.c[i].v!=null?String(r.c[i].v):''; });
+        return obj;
+      });
+      console.log('[loadData] gviz OK, rows='+allRows.length);
+      render();
+    })
+    .catch(function(e){
+      console.warn('[loadData] gviz failed, using localStorage', e);
+      loadFromLocalStorage();
+    });
+}
+
+function loadFromLocalStorage(){
   try{
     var raw = localStorage.getItem('edilicio_solicitudes');
     allRows = raw ? JSON.parse(raw) : [];
@@ -459,6 +491,7 @@ function loadData(showSpin){
   }catch(e){ allRows=[]; }
   render();
 }
+
 function saveToState(row){
   try{
     var raw = localStorage.getItem('edilicio_solicitudes');
