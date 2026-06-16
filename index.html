@@ -505,12 +505,14 @@ function loadData(showSpin){
       var rows = result && result.values;
       if(!rows || rows.length < 2){ allRows=[]; render(); return; }
       var headers = rows[0];
-      allRows = rows.slice(1).map(function(r,idx){
+      allRows = rows.slice(1).reduce(function(acc,r,idx){
+        if(!r[0]) return acc;
         var obj={};
         headers.forEach(function(h,i){ obj[h]=r[i]!=null?String(r[i]):''; });
         obj._rowIndex=idx+2;
-        return obj;
-      }).filter(function(r){ return r['Id solicitud']; });
+        acc.push(obj);
+        return acc;
+      },[]);
       console.log('[loadData] rows='+allRows.length);
       render();
     }).catch(function(e){
