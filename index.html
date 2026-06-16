@@ -931,6 +931,7 @@ function rejectReq(id){
 function saveManage(id){
   var r=findRow(id)||findRowByIndex(parseInt(id,10));
   if(!r) return;
+  if(!r['Id solicitud']) r['Id solicitud']=genId(); // auto-assign ID if missing
   var estado = canDo('cambiarEstado') && $('m_estado') ? $('m_estado').value : r['Estado'];
   r['Estado']=estado;
   if(canDo('asignarTurno') && $('m_turno'))   r['Turno responsable']=$('m_turno').value;
