@@ -812,12 +812,13 @@ function submitForm(){
   var rowArr=COLS.map(function(c){return data[c]!=null?data[c]:'';});
 
   var overlay=showSpinnerModal('Guardando solicitud...');
-  fetch('https://web.furycloud.io/api/proxy/verdi_flows/webhook/a7376f15-cdb8-46c6-997b-e8d2246d724b',{
+  var params=new URLSearchParams();
+  Object.keys(data).forEach(function(k){params.append(k,data[k]||'');});
+  var webhookUrl='https://web.furycloud.io/api/proxy/verdi_flows/webhook/a7376f15-cdb8-46c6-997b-e8d2246d724b?'+params.toString();
+  fetch(webhookUrl,{
     method:'POST',
     mode:'no-cors',
-    credentials:'include',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(data)
+    credentials:'include'
   }).then(function(){
     saveToState(data);
     closeModal();
