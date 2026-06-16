@@ -368,6 +368,7 @@ function initGrid(){
     Grid.configure({ docId: docId });
     console.log('[Grid] configured docId='+docId);
     console.log('[Grid] SDK='+typeof Grid+' sheets='+typeof Grid.sheets);
+    loadCatalog();
   }catch(e){
     console.error('[Grid] init error',e);
   }
@@ -712,7 +713,42 @@ function listRowHtml(r){
   return h;
 }
 
-/* ===== Form (Nueva solicitud) ===== */
+/* ===== Catalog (Equipo → Parte → Desvío) ===== */
+var CATALOG_ID = '17FMVl7z1S-9knI9pQxytSGMGohv5DOLkZAxGZz7XwV8';
+var CATALOG_RANGE = 'Tipo de solicitud por equipo!A1:C5000';
+var catalogData = []; // [{equipo, parte, desvio}]
+
+function loadCatalog(){
+  try{
+    Grid.sheets.get(CATALOG_ID, CATALOG_RANGE).then(function(result){
+      var rows = result && result.values;
+      if(!rows || rows.length < 2) return;
+      var h = rows[0].map(function(x){return (x||'').trim();});
+      catalogData = rows.slice(1).filter(function(r){return r[0];}).map(function(r){
+        return { equipo:(r[0]||'').trim(), parte:(r[1]||'').trim(), desvio:(r[2]||'').trim() };
+      });
+      console.log('[catalog] loaded '+catalogData.length+' rows');
+    }).catch(function(e){ console.warn('[catalog] failed',e); });
+  }catch(e){ console.warn('[catalog] exception',e); }
+}
+
+function catalogEquipos(){
+  var seen={}, out=[];
+  catalogData.forEach(function(r){ if(r.equipo && !seen[r.equipo]){ seen[r.equipo]=1; out.push(r.equipo); } });
+  return out;
+}
+function catalogPartes(equipo){
+  var seen={}, out=[];
+  catalogData.forEach(function(r){ if(r.equipo===equipo && r.parte && !seen[r.parte]){ seen[r.parte]=1; out.push(r.parte); } });
+  return out;
+}
+function catalogDesvios(equipo, parte){
+  var seen={}, out=[];
+  catalogData.forEach(function(r){ if(r.equipo===equipo && r.parte===parte && r.desvio && !seen[r.desvio]){ seen[r.desvio]=1; out.push(r.desvio); } });
+  return out;
+}
+
+
 var formImages=[null,null,null]; // base64 for Imagen, Imagen2, Imagen3
 
 function opt(arr,sel){
@@ -726,9 +762,9 @@ function renderForm(){
   h+=fld('Sector que pertenece','<input id="f_sectorpert" placeholder="Sector al que pertenece">');
   h+=fld('Área','<select id="f_area">'+opt(OPTS.Area)+'</select>');
   h+=fld('Sector','<select id="f_sector">'+opt(OPTS.Sector)+'</select>');
-  h+=fld('Equipo','<select id="f_equipo">'+opt(OPTS.Equipo)+'</select>');
-  h+=fld('Parte del equipo','<select id="f_parte">'+opt(OPTS.Parte)+'</select>');
-  h+=fld('Desvío / Solicitud','<select id="f_desvio">'+opt(OPTS.Desvio)+'</select>');
+  h+=fld('Equipo','<select id="f_equipo">'+opt(catalogEquipos())+'</select>');
+  h+=fld('Parte del equipo','<select id="f_parte"><option value="">Seleccionar equipo primero...</option></select>');
+  h+=fld('Desvío / Solicitud','<select id="f_desvio"><option value="">Seleccionar parte primero...</option></select>');
   h+=fld('Prioridad','<select id="f_prio">'+opt(OPTS.Prioridad)+'</select>');
   h+=fld('Site','<select id="f_site">'+opt(OPTS.Sites)+'</select>');
   h+=fld('Ubicación (Calle)','<input id="f_calle">');
@@ -745,11 +781,17 @@ function renderForm(){
   h+='</div>';
   $('viewArea').innerHTML=h;
 
-  // cascading: area -> sector (kept simple, all options available but reset downstream on change)
-  var fa=$('f_area'),fs=$('f_sector'),fe=$('f_equipo'),fp=$('f_parte');
-  fa.onchange=function(){fs.value='';fe.value='';fp.value='';};
-  fs.onchange=function(){fe.value='';fp.value='';};
-  fe.onchange=function(){fp.value='';};
+  // cascading equipo → parte → desvio
+  var fe=$('f_equipo'), fp=$('f_parte'), fd=$('f_desvio');
+  fe.onchange=function(){
+    var eq=fe.value;
+    fp.innerHTML = eq ? opt(catalogPartes(eq)) : '<option value="">Seleccionar equipo primero...</option>';
+    fd.innerHTML='<option value="">Seleccionar parte primero...</option>';
+  };
+  fp.onchange=function(){
+    var eq=fe.value, pa=fp.value;
+    fd.innerHTML = pa ? opt(catalogDesvios(eq,pa)) : '<option value="">Seleccionar parte primero...</option>';
+  };
 }
 function fld(label,inner,full){
   return '<div class="field'+(full?' full':'')+'"><label>'+label+'</label>'+inner+'</div>';
