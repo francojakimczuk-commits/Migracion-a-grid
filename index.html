@@ -103,9 +103,14 @@
 
   /* Cards / table */
   .grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;}
-  .group-header{font-size:15px;font-weight:700;padding:10px 8px 6px;margin-top:20px;background:var(--dark);color:#fff;border-radius:6px 6px 0 0;display:flex;align-items:center;gap:8px;}
-  .group-count{background:rgba(255,255,255,.2);border-radius:10px;padding:1px 8px;font-size:12px;}
-  .group-subheader{font-size:13px;font-weight:600;color:var(--gray);padding:6px 8px;background:#f0f0f0;border-left:3px solid var(--yellow);margin-top:1px;}
+  .group-header{font-size:15px;font-weight:700;padding:10px 12px;margin-top:12px;background:var(--dark);color:#fff;border-radius:6px;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;}
+  .group-header:hover{opacity:.9;}
+  .group-count{background:rgba(255,255,255,.25);border-radius:10px;padding:1px 8px;font-size:12px;margin-left:auto;}
+  .group-arrow{font-size:11px;width:14px;flex-shrink:0;}
+  .group-body.hidden{display:none;}
+  .group-subheader{font-size:13px;font-weight:600;color:var(--dark);padding:8px 12px;background:#f5f5f5;border-left:4px solid var(--yellow);margin-top:2px;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;}
+  .group-subheader:hover{background:#eee;}
+  .group-subheader .group-count{background:var(--dark);color:#fff;margin-left:auto;}
   .list-table{border:1px solid var(--border);border-top:none;}
   .list-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;}
   .list-row:hover{background:#fafafa;}
@@ -575,17 +580,24 @@ function renderList(){
     var estados = estadoOrder.filter(function(e){ return byEstado[e]; });
     Object.keys(byEstado).forEach(function(e){ if(estados.indexOf(e)<0) estados.push(e); });
 
-    estados.forEach(function(e){
+    estados.forEach(function(e, ei){
       var totalE = Object.keys(byEstado[e]).reduce(function(s,t){ return s+byEstado[e][t].length; },0);
-      html += '<div class="group-header">'+esc(e)+' <span class="group-count">'+totalE+'</span></div>';
+      var eId = 'eg'+ei;
+      html += '<div class="group-header" onclick="toggleGroup(\''+eId+'\')">';
+      html += '<span class="group-arrow" id="arr_'+eId+'">▶</span> '+esc(e)+' <span class="group-count">'+totalE+'</span></div>';
+      html += '<div class="group-body hidden" id="'+eId+'">';
       var turnos = Object.keys(byEstado[e]).sort(function(a,b){ return a==='NN'?1:b==='NN'?-1:a.localeCompare(b); });
-      turnos.forEach(function(t){
+      turnos.forEach(function(t, ti){
         var items = byEstado[e][t];
-        html += '<div class="group-subheader">'+esc(t)+' <span class="group-count">'+items.length+'</span></div>';
+        var tId = 'tg'+ei+'_'+ti;
+        html += '<div class="group-subheader" onclick="toggleGroup(\''+tId+'\')">';
+        html += '<span class="group-arrow" id="arr_'+tId+'">▶</span> '+esc(t)+' <span class="group-count">'+items.length+'</span></div>';
+        html += '<div class="group-body hidden" id="'+tId+'">';
         html += '<div class="list-table">';
         items.forEach(function(r){ html += listRowHtml(r); });
-        html += '</div>';
+        html += '</div></div>';
       });
+      html += '</div>';
     });
   } else {
     html += '<div class="grid-cards">';
@@ -660,6 +672,14 @@ function cardHtml(r){
   h+='</div>';
   h+='</div>';
   return h;
+}
+
+function toggleGroup(id){
+  var el=document.getElementById(id);
+  var arr=document.getElementById('arr_'+id);
+  if(!el) return;
+  var open=el.classList.toggle('hidden');
+  if(arr) arr.textContent = el.classList.contains('hidden') ? '▶' : '▼';
 }
 
 function listRowHtml(r){
