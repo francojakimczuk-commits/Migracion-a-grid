@@ -589,7 +589,7 @@ function renderList(){
       var totalE = Object.keys(byEstado[e]).reduce(function(s,t){ return s+byEstado[e][t].length; },0);
       var eId = 'eg'+ei;
       html += '<div class="group-header" onclick="toggleGroup(\''+eId+'\')">';
-      html += '<span class="group-arrow" id="arr_'+eId+'">▶</span><span class="estado-dot estado-dot-'+e.replace(/[^a-zA-Z]/g,'')+'"></span> '+esc(e)+' <span class="group-count">'+totalE+'</span></div>';
+      html += '<span class="group-arrow" id="arr_'+eId+'">▶</span><span class="estado-dot" style="background:'+estadoColor(e)+'"></span> '+esc(e)+' <span class="group-count">'+totalE+'</span></div>';
       html += '<div class="group-body hidden" id="'+eId+'">';
       var turnos = Object.keys(byEstado[e]).sort(function(a,b){ return a==='NN'?1:b==='NN'?-1:a.localeCompare(b); });
       turnos.forEach(function(t, ti){
@@ -677,6 +677,15 @@ function cardHtml(r){
   h+='</div>';
   h+='</div>';
   return h;
+}
+
+function estadoColor(e){
+  var s=(e||'').toLowerCase();
+  if(s.indexOf('pendiente')>=0) return '#e53935';
+  if(s.indexOf('curso')>=0||s.indexOf('proceso')>=0) return '#FFE600';
+  if(s.indexOf('finaliz')>=0) return '#43a047';
+  if(s.indexOf('cancel')>=0||s.indexOf('rechaz')>=0) return '#9e9e9e';
+  return '#9e9e9e';
 }
 
 function toggleGroup(id){
