@@ -103,6 +103,8 @@
 
   /* Cards / table */
   .grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;}
+  .group-header{font-size:16px;font-weight:700;padding:10px 4px 4px;margin-top:16px;border-bottom:2px solid var(--dark);}
+  .group-subheader{font-size:13px;font-weight:600;color:var(--gray);padding:8px 4px 4px;margin-top:8px;}
   .card{
     background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);
     border:1px solid var(--border);
@@ -547,9 +549,37 @@ function renderList(){
     bindToolbar();
     return;
   }
-  html += '<div class="grid-cards">';
-  rows.forEach(function(r){ html += cardHtml(r); });
-  html += '</div>';
+
+  if(currentTab==='todas'){
+    // Group by Estado → Turno responsable
+    var estadoOrder = OPTS.Estado;
+    var byEstado = {};
+    rows.forEach(function(r){
+      var e = r['Estado']||'Sin estado';
+      var t = r['Turno responsable']||'Ninguno';
+      if(!byEstado[e]) byEstado[e]={};
+      if(!byEstado[e][t]) byEstado[e][t]=[];
+      byEstado[e][t].push(r);
+    });
+    var estados = estadoOrder.filter(function(e){ return byEstado[e]; });
+    Object.keys(byEstado).forEach(function(e){ if(estados.indexOf(e)<0) estados.push(e); });
+
+    estados.forEach(function(e){
+      html += '<div class="group-header estado-header">'+esc(e)+'</div>';
+      var turnos = Object.keys(byEstado[e]).sort();
+      turnos.forEach(function(t){
+        html += '<div class="group-subheader">Turno: '+esc(t)+'</div>';
+        html += '<div class="grid-cards">';
+        byEstado[e][t].forEach(function(r){ html += cardHtml(r); });
+        html += '</div>';
+      });
+    });
+  } else {
+    html += '<div class="grid-cards">';
+    rows.forEach(function(r){ html += cardHtml(r); });
+    html += '</div>';
+  }
+
   $('viewArea').innerHTML=html;
   bindToolbar();
 }
