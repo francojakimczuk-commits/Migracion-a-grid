@@ -415,9 +415,12 @@ function buildTabs(){
   var defs;
   if(canDo('verTodas')){
     defs=[['todas','Todas las Solicitudes'],['mis','Mis Solicitudes']];
+    if(session.turno) defs.push(['turno','Mi Turno']);
     if(canDo('crear')) defs.push(['nueva','Nueva Solicitud']);
   }else{
-    defs=[['mis','Mis Solicitudes'],['nueva','Nueva Solicitud']];
+    defs=[['mis','Mis Solicitudes']];
+    if(session.turno) defs.push(['turno','Mi Turno']);
+    defs.push(['nueva','Nueva Solicitud']);
   }
   defs.forEach(function(d,i){
     var b=document.createElement('button');
@@ -520,6 +523,9 @@ function renderList(){
   var rows = allRows.slice();
   if(currentTab==='mis'){
     rows = rows.filter(function(r){ return (r['Solicitante']||'').toLowerCase()===session.email.toLowerCase(); });
+  }
+  if(currentTab==='turno'){
+    rows = rows.filter(function(r){ return (r['Turno responsable']||'').toLowerCase()===(session.turno||'').toLowerCase(); });
   }
   // apply filters
   if(filters.estado) rows=rows.filter(function(r){return r['Estado']===filters.estado;});
