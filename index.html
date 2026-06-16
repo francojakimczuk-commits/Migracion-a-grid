@@ -466,84 +466,27 @@ function rowArrToObj(arr){
   return obj;
 }
 
-function tryDataset(onSuccess, onFail){
-  try{
-    if(typeof Grid==='undefined'||typeof Grid.dataset!=='function'){onFail();return;}
-    console.log('[loadData] trying Grid.dataset(0)...');
-    var ds=Grid.dataset(0);
-    console.log('[loadData] dataset(0) type='+typeof ds+' keys='+JSON.stringify(Object.keys(ds||{})));
-    if(ds&&typeof ds.get==='function'){
-      ds.get(RANGE).then(function(r){console.log('[loadData] dataset.get OK',JSON.stringify(r).slice(0,300));onSuccess(r);}).catch(function(e){console.warn('[loadData] dataset.get failed',e);onFail();});
-    }else if(ds&&typeof ds.query==='function'){
-      ds.query('SELECT *').then(function(r){console.log('[loadData] dataset.query OK',JSON.stringify(r).slice(0,300));onSuccess(r);}).catch(function(e){console.warn('[loadData] dataset.query failed',e);onFail();});
-    }else{console.warn('[loadData] dataset(0) has no get/query, value=',JSON.stringify(ds).slice(0,200));onFail();}
-  }catch(e){console.warn('[loadData] dataset error',e);onFail();}
-}
-
-function tryGridQueries(variants, idx, onSuccess, onFail){
-  if(idx >= variants.length){ onFail(); return; }
-  var v = variants[idx];
-  console.log('[loadData] trying variant', idx, JSON.stringify(v));
-  var p;
-  try{ p = Grid.query.apply(Grid, v); }catch(e){ tryGridQueries(variants,idx+1,onSuccess,onFail); return; }
-  if(!p||typeof p.then!=='function'){ tryGridQueries(variants,idx+1,onSuccess,onFail); return; }
-  p.then(function(r){
-    console.log('[loadData] variant',idx,'OK:', JSON.stringify(r).slice(0,300));
-    onSuccess(r);
-  }).catch(function(e){
-    console.warn('[loadData] variant',idx,'failed:', JSON.stringify(e));
-    tryGridQueries(variants,idx+1,onSuccess,onFail);
-  });
-}
-
-function triggerSync(){
-  try{
-    fetch(SYNC_WEBHOOK, {method:'POST', mode:'no-cors', credentials:'include',
-      headers:{'Content-Type':'application/json'}, body:'{}'});
-    console.log('[sync] triggered webhook');
-  }catch(e){}
-}
-
 function loadData(showSpin){
   if(showSpin) renderSpinner();
-  // Trigger n8n sync (Sheet → GRID.state), then read state after delay
-  triggerSync();
-  setTimeout(function(){
-    gsGet('solicitudes').then(function(rows){
-      console.log('[loadData] GRID.state resolved:', Array.isArray(rows) ? rows.length+' rows' : rows);
-      if(Array.isArray(rows) && rows.length > 0){
-        allRows = rows;
-        render();
-      } else {
-        loadFromLocalStorage();
-      }
-    }).catch(function(e){
-      console.warn('[loadData] GRID.state error', e);
-      loadFromLocalStorage();
-    });
-  }, 5000);
-}
-
-function parseQueryResult(result){
   try{
-    // result may be array of arrays, array of objects, or {values:[][], rows:[]}
-    var rows;
-    if(result && result.values) rows = result.values;
-    else if(Array.isArray(result)) rows = result;
-    else { loadFromLocalStorage(); return; }
-
-    if(rows.length > 1){
+    Grid.sheets.get(SPREADSHEET_ID, RANGE).then(function(result){
+      console.log('[loadData] Grid.sheets OK');
+      var rows = result && result.values;
+      if(!rows || rows.length < 2){ allRows=[]; render(); return; }
       var headers = rows[0];
       allRows = rows.slice(1).filter(function(r){ return r[0]; }).map(function(r){
         var obj={};
         headers.forEach(function(h,i){ obj[h]=r[i]!=null?String(r[i]):''; });
         return obj;
       });
-    } else { allRows=[]; }
-    console.log('[loadData] parsed rows='+allRows.length);
-    render();
+      console.log('[loadData] rows='+allRows.length);
+      render();
+    }).catch(function(e){
+      console.warn('[loadData] Grid.sheets failed:', JSON.stringify(e));
+      loadFromLocalStorage();
+    });
   }catch(e){
-    console.warn('[loadData] parseQueryResult error:', e);
+    console.warn('[loadData] exception:', e);
     loadFromLocalStorage();
   }
 }
@@ -558,21 +501,7 @@ function loadFromLocalStorage(){
 }
 
 function saveToState(row){
-  // Save to localStorage immediately as backup
-  try{
-    var raw = localStorage.getItem('edilicio_solicitudes');
-    var arr = raw ? JSON.parse(raw) : [];
-    if(!Array.isArray(arr)) arr=[];
-    arr.push(row);
-    localStorage.setItem('edilicio_solicitudes', JSON.stringify(arr));
-  }catch(e){}
-  // Save to GRID.state (server-backed, shared between users)
-  gsGet('solicitudes').then(function(stateArr){
-    if(!Array.isArray(stateArr)) stateArr=[];
-    stateArr.push(row);
-    gsSet('solicitudes', stateArr);
-    console.log('[saveToState] GRID.state saved, total='+stateArr.length);
-  }).catch(function(e){ console.warn('[saveToState] GRID.state error',e); });
+  // Sheet is source of truth (written via Verdiflow). Just reload after submit.
 }
 
 /* ===== Render ===== */
