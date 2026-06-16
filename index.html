@@ -103,8 +103,19 @@
 
   /* Cards / table */
   .grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;}
-  .group-header{font-size:16px;font-weight:700;padding:10px 4px 4px;margin-top:16px;border-bottom:2px solid var(--dark);}
-  .group-subheader{font-size:13px;font-weight:600;color:var(--gray);padding:8px 4px 4px;margin-top:8px;}
+  .group-header{font-size:15px;font-weight:700;padding:10px 8px 6px;margin-top:20px;background:var(--dark);color:#fff;border-radius:6px 6px 0 0;display:flex;align-items:center;gap:8px;}
+  .group-count{background:rgba(255,255,255,.2);border-radius:10px;padding:1px 8px;font-size:12px;}
+  .group-subheader{font-size:13px;font-weight:600;color:var(--gray);padding:6px 8px;background:#f0f0f0;border-left:3px solid var(--yellow);margin-top:1px;}
+  .list-table{border:1px solid var(--border);border-top:none;}
+  .list-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;}
+  .list-row:hover{background:#fafafa;}
+  .list-row:last-child{border-bottom:none;}
+  .list-id{font-size:11px;color:var(--gray);font-family:monospace;width:80px;flex-shrink:0;}
+  .list-main{flex:1;min-width:0;}
+  .list-title{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .list-sub{font-size:12px;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .list-meta{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  .list-date{font-size:11px;color:var(--gray);}
   .card{
     background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);
     border:1px solid var(--border);
@@ -551,12 +562,12 @@ function renderList(){
   }
 
   if(currentTab==='todas'){
-    // Group by Estado → Turno responsable
+    // Group by Estado → Turno responsable, list view
     var estadoOrder = OPTS.Estado;
     var byEstado = {};
     rows.forEach(function(r){
       var e = r['Estado']||'Sin estado';
-      var t = r['Turno responsable']||'Ninguno';
+      var t = r['Turno responsable']||'NN';
       if(!byEstado[e]) byEstado[e]={};
       if(!byEstado[e][t]) byEstado[e][t]=[];
       byEstado[e][t].push(r);
@@ -565,12 +576,14 @@ function renderList(){
     Object.keys(byEstado).forEach(function(e){ if(estados.indexOf(e)<0) estados.push(e); });
 
     estados.forEach(function(e){
-      html += '<div class="group-header estado-header">'+esc(e)+'</div>';
-      var turnos = Object.keys(byEstado[e]).sort();
+      var totalE = Object.keys(byEstado[e]).reduce(function(s,t){ return s+byEstado[e][t].length; },0);
+      html += '<div class="group-header">'+esc(e)+' <span class="group-count">'+totalE+'</span></div>';
+      var turnos = Object.keys(byEstado[e]).sort(function(a,b){ return a==='NN'?1:b==='NN'?-1:a.localeCompare(b); });
       turnos.forEach(function(t){
-        html += '<div class="group-subheader">Turno: '+esc(t)+'</div>';
-        html += '<div class="grid-cards">';
-        byEstado[e][t].forEach(function(r){ html += cardHtml(r); });
+        var items = byEstado[e][t];
+        html += '<div class="group-subheader">'+esc(t)+' <span class="group-count">'+items.length+'</span></div>';
+        html += '<div class="list-table">';
+        items.forEach(function(r){ html += listRowHtml(r); });
         html += '</div>';
       });
     });
@@ -644,6 +657,21 @@ function cardHtml(r){
   if(canDo('verTodas')){
     h+='<button class="btn small" onclick="openManage(\''+esc(r['Id solicitud'])+'\')">Gestionar</button>';
   }
+  h+='</div>';
+  h+='</div>';
+  return h;
+}
+
+function listRowHtml(r){
+  var h='<div class="list-row" onclick="openManage(\''+esc(r['Id solicitud'])+'\')">';
+  h+='<div class="list-id">#'+esc((r['Id solicitud']||'').slice(0,8))+'</div>';
+  h+='<div class="list-main">';
+  h+='<div class="list-title">'+esc(r['Equipo']||'-')+' &middot; '+esc(r['Desvio/Solicitud']||'-')+'</div>';
+  h+='<div class="list-sub">'+esc(r['Area']||'-')+' / '+esc(r['Sector']||'-')+' &nbsp;·&nbsp; '+esc(r['Solicitante']||'-')+'</div>';
+  h+='</div>';
+  h+='<div class="list-meta">';
+  if(r['Prioridad']) h+='<span class="badge '+badgeClass(r['Prioridad'])+'">'+esc(r['Prioridad'])+'</span>';
+  h+='<span class="list-date">'+esc((r['Fecha Creacion solicitud']||'').slice(0,10))+'</span>';
   h+='</div>';
   h+='</div>';
   return h;
