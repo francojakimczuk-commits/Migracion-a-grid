@@ -502,7 +502,7 @@ function loadData(showSpin){
       var headers = rows[0];
       var normHeaders = headers.map(function(h){ return (h||'').trim(); });
       allRows = rows.slice(1).reduce(function(acc,r,idx){
-        if(!r[0]) return acc;
+        if(!r || !r.some(function(c){ return c&&String(c).trim(); })) return acc;
         var obj={};
         normHeaders.forEach(function(h,i){ obj[h]=r[i]!=null?String(r[i]):''; });
         obj._rowIndex=idx+2;
