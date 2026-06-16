@@ -368,11 +368,6 @@ function initGrid(){
     Grid.configure({ docId: docId });
     console.log('[Grid] configured docId='+docId);
     console.log('[Grid] SDK='+typeof Grid+' sheets='+typeof Grid.sheets);
-    Grid.sheets.get(SPREADSHEET_ID,'Solicitudes!A1:A1').then(function(r){
-      console.log('[Grid] test read OK',r);
-    }).catch(function(e){
-      console.error('[Grid] test read FAILED',JSON.stringify(e));
-    });
   }catch(e){
     console.error('[Grid] init error',e);
   }
