@@ -700,8 +700,8 @@ function toggleGroup(id){
 }
 
 function listRowHtml(r){
-  var h='<div class="list-row" onclick="openManage(\''+esc(r['Id solicitud'])+'\')">';
-  h+='<div class="list-id">#'+esc((r['Id solicitud']||'').slice(0,8))+'</div>';
+  var h='<div class="list-row" onclick="openManageByIndex('+r._rowIndex+')">';
+  h+='<div class="list-id">#'+esc((r['Id solicitud']||String(r._rowIndex)||'').slice(0,8))+'</div>';
   h+='<div class="list-main">';
   h+='<div class="list-title">'+esc(r['Equipo']||'-')+' &middot; '+esc(r['Desvio/Solicitud']||'-')+'</div>';
   h+='<div class="list-sub">'+esc(r['Area']||'-')+' / '+esc(r['Sector']||'-')+' &nbsp;·&nbsp; '+esc(r['Solicitante']||'-')+'</div>';
@@ -836,8 +836,12 @@ function submitForm(){
 
 /* ===== Manage (Mantenimiento) ===== */
 function openManage(id){
-  var r=findRow(id);
+  var r=findRow(id)||findRowByIndex(parseInt(id,10));
   if(!r){ showAlert('No encontrada','La solicitud no existe.'); return; }
+  openManageRow(r);
+}
+function openManageRow(r){
+  var id=r['Id solicitud']||String(r._rowIndex);
 
   function info(label, val){
     return '<div style="margin-bottom:8px;font-size:13px;"><span style="font-weight:600;color:#666;">'+label+':</span> '+esc(val||'-')+'</div>';
@@ -922,7 +926,7 @@ function rejectReq(id){
   saveManage(id);
 }
 function saveManage(id){
-  var r=findRow(id);
+  var r=findRow(id)||findRowByIndex(parseInt(id,10));
   if(!r) return;
   var estado = canDo('cambiarEstado') && $('m_estado') ? $('m_estado').value : r['Estado'];
   r['Estado']=estado;
@@ -954,6 +958,15 @@ function saveManage(id){
 function findRow(id){
   for(var i=0;i<allRows.length;i++){ if(allRows[i]['Id solicitud']===id) return allRows[i]; }
   return null;
+}
+function findRowByIndex(rowIndex){
+  for(var i=0;i<allRows.length;i++){ if(allRows[i]._rowIndex===rowIndex) return allRows[i]; }
+  return null;
+}
+function openManageByIndex(rowIndex){
+  var r=findRowByIndex(rowIndex);
+  if(!r){ showAlert('No encontrada','La solicitud no existe.'); return; }
+  openManageRow(r);
 }
 
 /* ===== Modals / Toast ===== */
