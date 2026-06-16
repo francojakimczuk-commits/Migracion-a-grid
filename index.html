@@ -437,36 +437,24 @@ function switchTab(t,btn){
 
 /* ===== Data load ===== */
 function gsGet(key){
+  // GRID.state.get(key) returns Promise resolving to {doc_id, state:{...}, updated_at}
   try{
     var s=window.GRID&&window.GRID.state;
-    if(!s) return undefined;
-    var result = typeof s.get==='function' ? s.get(key) : s[key];
-    if(result && typeof result.then === 'function'){
-      // get() returns full state object {doc_id, state:{...}, updated_at}
-      return result.then(function(v){
-        if(v && v.state && v.state[key] !== undefined) return v.state[key];
-        if(v && v[key] !== undefined) return v[key];
-        return v;
-      });
-    }
-    if(result && result.state && result.state[key] !== undefined) return result.state[key];
-    return result;
-  }catch(e){ return undefined; }
+    if(!s) return Promise.resolve(undefined);
+    return s.get(key).then(function(v){
+      return (v && v.state && v.state[key] !== undefined) ? v.state[key] : undefined;
+    });
+  }catch(e){ return Promise.resolve(undefined); }
 }
 function gsSet(key,val){
+  // GRID.state.patch({key:val}) is the correct write method
   try{
     var s=window.GRID&&window.GRID.state;
     if(!s) return;
-    var patch = {};
-    patch[key] = val;
-    // prefer patch() over set() for partial updates
-    var fn = typeof s.patch==='function' ? s.patch.bind(s) : (typeof s.set==='function' ? function(obj){ return s.set(key, obj[key]); } : null);
-    if(!fn){ s[key]=val; return; }
-    var p = fn(patch);
-    if(p && typeof p.then === 'function'){
-      p.then(function(){ console.log('[gsSet] saved key='+key); })
-       .catch(function(e){ console.warn('[gsSet] error key='+key, e); });
-    }
+    var obj={}; obj[key]=val;
+    s.patch(obj)
+      .then(function(){ console.log('[gsSet] saved key='+key); })
+      .catch(function(e){ console.warn('[gsSet] error key='+key, e); });
   }catch(e){ console.warn('[gsSet] exception', e); }
 }
 var COL_HEADERS = ['Id solicitud','Solicitante','Sector que pertenece','Area','Sector','Equipo','Parte del equipo','Desvio/Solicitud','Ubicacion (Calle)(Dock/Puesto/Calle)','Descripcion','Imagen','Video','Estado','Turno responsable','Fecha Planificada','Fecha Real de Ejecucion','Comentarios Mantenimiento','Prioridad','Materiales','Fecha Creacion'];
@@ -509,31 +497,19 @@ function tryGridQueries(variants, idx, onSuccess, onFail){
 
 function loadData(showSpin){
   if(showSpin) renderSpinner();
-  var stateVal = gsGet('solicitudes');
-  console.log('[loadData] GRID.state solicitudes:', stateVal);
-  if(stateVal && typeof stateVal.then === 'function'){
-    stateVal.then(function(rows){
-      console.log('[loadData] GRID.state resolved:', rows);
-      if(Array.isArray(rows) && rows.length > 0){
-        allRows = rows;
-        console.log('[loadData] loaded from GRID.state, rows='+allRows.length);
-        render();
-      } else {
-        loadFromLocalStorage();
-      }
-    }).catch(function(e){
-      console.warn('[loadData] GRID.state error', e);
+  gsGet('solicitudes').then(function(rows){
+    console.log('[loadData] GRID.state resolved:', rows);
+    if(Array.isArray(rows) && rows.length > 0){
+      allRows = rows;
+      console.log('[loadData] loaded from GRID.state, rows='+allRows.length);
+      render();
+    } else {
       loadFromLocalStorage();
-    });
-    return;
-  }
-  if(Array.isArray(stateVal) && stateVal.length > 0){
-    allRows = stateVal;
-    console.log('[loadData] loaded from GRID.state sync, rows='+allRows.length);
-    render();
-    return;
-  }
-  loadFromLocalStorage();
+    }
+  }).catch(function(e){
+    console.warn('[loadData] GRID.state error', e);
+    loadFromLocalStorage();
+  });
 }
 
 function parseQueryResult(result){
@@ -570,7 +546,7 @@ function loadFromLocalStorage(){
 }
 
 function saveToState(row){
-  // Save to localStorage immediately
+  // Save to localStorage immediately as backup
   try{
     var raw = localStorage.getItem('edilicio_solicitudes');
     var arr = raw ? JSON.parse(raw) : [];
@@ -578,21 +554,13 @@ function saveToState(row){
     arr.push(row);
     localStorage.setItem('edilicio_solicitudes', JSON.stringify(arr));
   }catch(e){}
-  // Save to GRID.state async
-  try{
-    var stateVal = gsGet('solicitudes');
-    var doSave = function(stateArr){
-      if(!Array.isArray(stateArr)) stateArr=[];
-      stateArr.push(row);
-      gsSet('solicitudes', stateArr);
-      console.log('[saveToState] GRID.state saved, total='+stateArr.length);
-    };
-    if(stateVal && typeof stateVal.then === 'function'){
-      stateVal.then(doSave).catch(function(){ doSave([]); });
-    } else {
-      doSave(Array.isArray(stateVal) ? stateVal : []);
-    }
-  }catch(e){ console.warn('[saveToState] GRID.state error',e); }
+  // Save to GRID.state (server-backed, shared between users)
+  gsGet('solicitudes').then(function(stateArr){
+    if(!Array.isArray(stateArr)) stateArr=[];
+    stateArr.push(row);
+    gsSet('solicitudes', stateArr);
+    console.log('[saveToState] GRID.state saved, total='+stateArr.length);
+  }).catch(function(e){ console.warn('[saveToState] GRID.state error',e); });
 }
 
 /* ===== Render ===== */
