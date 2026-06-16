@@ -222,6 +222,7 @@ var SPREADSHEET_ID = '1xhMdMRkYZxkpZA8iPOWNN4YpjdKmXFwV4bE8Mr--eis';
 var SHEET = 'Solicitudes';
 var RANGE = SHEET + '!A1:AE10000';
 var APPEND_RANGE = SHEET + '!A:AE';
+var SYNC_WEBHOOK = 'https://web.furycloud.io/api/proxy/verdi_flows/webhook/a1192105-2088-4645-9c70-7fd7f5327a1e';
 
 /* In-memory session (lives only in this variable) */
 var session = { email: '', role: '', turno: '', site: '' };
@@ -495,21 +496,32 @@ function tryGridQueries(variants, idx, onSuccess, onFail){
   });
 }
 
+function triggerSync(){
+  try{
+    fetch(SYNC_WEBHOOK, {method:'POST', mode:'no-cors', credentials:'include',
+      headers:{'Content-Type':'application/json'}, body:'{}'});
+    console.log('[sync] triggered webhook');
+  }catch(e){}
+}
+
 function loadData(showSpin){
   if(showSpin) renderSpinner();
-  gsGet('solicitudes').then(function(rows){
-    console.log('[loadData] GRID.state resolved:', rows);
-    if(Array.isArray(rows) && rows.length > 0){
-      allRows = rows;
-      console.log('[loadData] loaded from GRID.state, rows='+allRows.length);
-      render();
-    } else {
+  // Trigger n8n sync (Sheet → GRID.state), then read state after delay
+  triggerSync();
+  setTimeout(function(){
+    gsGet('solicitudes').then(function(rows){
+      console.log('[loadData] GRID.state resolved:', Array.isArray(rows) ? rows.length+' rows' : rows);
+      if(Array.isArray(rows) && rows.length > 0){
+        allRows = rows;
+        render();
+      } else {
+        loadFromLocalStorage();
+      }
+    }).catch(function(e){
+      console.warn('[loadData] GRID.state error', e);
       loadFromLocalStorage();
-    }
-  }).catch(function(e){
-    console.warn('[loadData] GRID.state error', e);
-    loadFromLocalStorage();
-  });
+    });
+  }, 5000);
 }
 
 function parseQueryResult(result){
