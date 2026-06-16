@@ -414,7 +414,7 @@ function buildTabs(){
   var tabs=$('tabs'); tabs.innerHTML='';
   var defs;
   if(canDo('verTodas')){
-    defs=[['todas','Todas las Solicitudes']];
+    defs=[['todas','Todas las Solicitudes'],['mis','Mis Solicitudes']];
     if(canDo('crear')) defs.push(['nueva','Nueva Solicitud']);
   }else{
     defs=[['mis','Mis Solicitudes'],['nueva','Nueva Solicitud']];
