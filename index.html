@@ -500,14 +500,16 @@ function loadData(showSpin){
       var rows = result && result.values;
       if(!rows || rows.length < 2){ allRows=[]; render(); return; }
       var headers = rows[0];
+      var normHeaders = headers.map(function(h){ return (h||'').trim(); });
       allRows = rows.slice(1).reduce(function(acc,r,idx){
         if(!r[0]) return acc;
         var obj={};
-        headers.forEach(function(h,i){ obj[h]=r[i]!=null?String(r[i]):''; });
-        obj._rowIndex=idx+2; // 1-based sheet row (row 1 = headers)
+        normHeaders.forEach(function(h,i){ obj[h]=r[i]!=null?String(r[i]):''; });
+        obj._rowIndex=idx+2;
         acc.push(obj);
         return acc;
       },[]);
+      console.log('[loadData] headers='+JSON.stringify(normHeaders.slice(0,5)));
       console.log('[loadData] rows='+allRows.length);
       render();
     }).catch(function(e){
@@ -700,8 +702,9 @@ function toggleGroup(id){
 }
 
 function listRowHtml(r){
-  var h='<div class="list-row" onclick="openManageByIndex('+r._rowIndex+')">';
-  h+='<div class="list-id">#'+esc((r['Id solicitud']||String(r._rowIndex)||'').slice(0,8))+'</div>';
+  var rid=r['Id solicitud']||String(r._rowIndex);
+  var h='<div class="list-row" onclick="openManage(\''+esc(rid)+'\')">';
+  h+='<div class="list-id">#'+esc(rid.slice(0,8))+'</div>';
   h+='<div class="list-main">';
   h+='<div class="list-title">'+esc(r['Equipo']||'-')+' &middot; '+esc(r['Desvio/Solicitud']||'-')+'</div>';
   h+='<div class="list-sub">'+esc(r['Area']||'-')+' / '+esc(r['Sector']||'-')+' &nbsp;·&nbsp; '+esc(r['Solicitante']||'-')+'</div>';
