@@ -302,10 +302,10 @@ function canDo(action){
     case 'crear':         return r==='operativo'||r==='planner'||r==='admin';
     case 'verTodas':      return r!=='operativo';
     case 'asignarTurno':  return r==='tl'||r==='planner'||r==='admin';
-    case 'cambiarEstado': return r!=='operativo';
-    case 'comentMant':    return r==='tecnico'||r==='planner'||r==='admin';
+    case 'cambiarEstado': return r==='admin'||r==='tl'||r==='planner';
+    case 'comentMant':    return r==='tecnico'||r==='tl'||r==='planner'||r==='admin';
     case 'fechas':        return r==='tecnico'||r==='planner'||r==='admin';
-    case 'planificacion': return r==='planner'||r==='admin';
+    case 'planificacion': return r==='planner';
     case 'rechazo':       return r==='planner'||r==='admin';
     case 'material':      return r==='tecnico'||r==='planner'||r==='admin';
     default: return false;
@@ -500,11 +500,14 @@ function loadData(showSpin){
       var rows = result && result.values;
       if(!rows || rows.length < 2){ allRows=[]; render(); return; }
       var headers = rows[0];
-      allRows = rows.slice(1).filter(function(r){ return r[0]; }).map(function(r){
+      allRows = rows.slice(1).reduce(function(acc,r,idx){
+        if(!r[0]) return acc;
         var obj={};
         headers.forEach(function(h,i){ obj[h]=r[i]!=null?String(r[i]):''; });
-        return obj;
-      });
+        obj._rowIndex=idx+2; // 1-based sheet row (row 1 = headers)
+        acc.push(obj);
+        return acc;
+      },[]);
       console.log('[loadData] rows='+allRows.length);
       render();
     }).catch(function(e){
@@ -835,28 +838,81 @@ function submitForm(){
 function openManage(id){
   var r=findRow(id);
   if(!r){ showAlert('No encontrada','La solicitud no existe.'); return; }
-  var h='<div class="modal"><h2>Gestionar #'+esc(id)+'</h2><p>'+esc(r['Equipo'])+' &middot; '+esc(r['Desvio/Solicitud'])+'</p>';
+
+  function info(label, val){
+    return '<div style="margin-bottom:8px;font-size:13px;"><span style="font-weight:600;color:#666;">'+label+':</span> '+esc(val||'-')+'</div>';
+  }
+
+  var h='<div class="modal" style="width:560px;">';
+  h+='<h2 style="margin-bottom:4px;">Solicitud #'+esc((r['Id solicitud']||'').slice(0,8))+'</h2>';
+  h+='<p style="margin-bottom:14px;">'+esc(r['Equipo'])+' &middot; '+esc(r['Desvio/Solicitud'])+'</p>';
+
+  // Read-only info block
+  h+='<div style="background:#f5f5f5;border-radius:8px;padding:12px;margin-bottom:16px;">';
+  h+=info('Solicitante',r['Solicitante']);
+  h+=info('Área / Sector',r['Area']+' / '+r['Sector']);
+  h+=info('Parte',r['Parte del equipo']);
+  h+=info('Ubicación',(r['Ubicacion (Calle)']||'-')+' / '+(r['Ubicacion (Dock/Puesto/Calle/Modulo)']||'-'));
+  h+=info('Site',r['Sites']);
+  h+=info('Prioridad',r['Prioridad']);
+  h+=info('Creada',r['Fecha Creacion solicitud']);
+  if(r['Descripcion']) h+=info('Descripción',r['Descripcion']);
+  h+='</div>';
+
+  // Editable fields
   if(canDo('cambiarEstado'))
     h+='<div class="field"><label>Estado</label><select id="m_estado">'+opt(OPTS.Estado,r['Estado'])+'</select></div>';
-  if(canDo('asignarTurno'))
-    h+='<div class="field"><label>Turno responsable</label><select id="m_turno">'+opt(OPTS.Turno,r['Turno responsable'])+'</select></div>';
+  else
+    h+=info('Estado',r['Estado']);
+
+  if(canDo('asignarTurno')){
+    var turnoOpts;
+    if(session.role==='tl' && session.turno && session.turno!=='-'){
+      // TL can only assign to their own turno
+      turnoOpts='<option value="">Sin asignar</option><option value="'+esc(session.turno)+'"'+(r['Turno responsable']===session.turno?' selected':'')+'>'+esc(session.turno)+'</option>';
+    } else {
+      turnoOpts=opt(OPTS.Turno,r['Turno responsable']);
+    }
+    h+='<div class="field"><label>Turno responsable</label><select id="m_turno">'+turnoOpts+'</select></div>';
+  } else {
+    h+=info('Turno responsable',r['Turno responsable']);
+  }
+
   if(canDo('planificacion'))
     h+='<div class="field"><label>Fecha Planificación</label><input id="m_fplan" type="date" value="'+esc(r['Fecha Planificacion'])+'"></div>';
+  else if(r['Fecha Planificacion'])
+    h+=info('Fecha Planificación',r['Fecha Planificacion']);
+
   if(canDo('fechas')){
     h+='<div class="field"><label>FechaHora inicio real</label><input id="m_ini" value="'+esc(r['FechaHora inicio real'])+'" placeholder="YYYY-MM-DD HH:MM"></div>';
     h+='<div class="field"><label>FechaHora fin real</label><input id="m_fin" value="'+esc(r['FechaHora fin real'])+'" placeholder="YYYY-MM-DD HH:MM"></div>';
+  } else {
+    if(r['FechaHora inicio real']) h+=info('Inicio real',r['FechaHora inicio real']);
+    if(r['FechaHora fin real']) h+=info('Fin real',r['FechaHora fin real']);
   }
+
   if(canDo('comentMant'))
     h+='<div class="field"><label>Comentario Mantenimiento</label><textarea id="m_com">'+esc(r['Comentario Mantenimiento'])+'</textarea></div>';
+  else if(r['Comentario Mantenimiento'])
+    h+=info('Comentario Mant.',r['Comentario Mantenimiento']);
+
   if(canDo('material'))
     h+='<div class="field"><label>Material Pendiente</label><input id="m_mat" value="'+esc(r['Material Pendiente'])+'"></div>';
+  else if(r['Material Pendiente'])
+    h+=info('Material Pendiente',r['Material Pendiente']);
+
   if(canDo('rechazo'))
-    h+='<div class="field"><label>Comentario de Rechazo (si rechazás)</label><textarea id="m_rech">'+esc(r['Comentario de Rechazo'])+'</textarea></div>';
+    h+='<div class="field"><label>Comentario de Rechazo</label><textarea id="m_rech">'+esc(r['Comentario de Rechazo'])+'</textarea></div>';
+  else if(r['Comentario de Rechazo'])
+    h+='<div style="background:#ffebee;border-radius:6px;padding:10px;margin-bottom:10px;font-size:13px;"><b>Rechazo:</b> '+esc(r['Comentario de Rechazo'])+'</div>';
+
   h+='<div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Cerrar</button>';
   if(canDo('rechazo'))
     h+='<button class="btn danger" onclick="rejectReq(\''+esc(id)+'\')">Rechazar</button>';
-  h+='<button class="btn yellow" onclick="saveManage(\''+esc(id)+'\')">Guardar</button></div>';
-  h+='</div>';
+  var canSave=canDo('cambiarEstado')||canDo('asignarTurno')||canDo('planificacion')||canDo('fechas')||canDo('comentMant')||canDo('material')||canDo('rechazo');
+  if(canSave)
+    h+='<button class="btn yellow" onclick="saveManage(\''+esc(id)+'\')">Guardar</button>';
+  h+='</div></div>';
   openModal(h);
 }
 function rejectReq(id){
