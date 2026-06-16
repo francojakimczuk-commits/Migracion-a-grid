@@ -323,11 +323,11 @@ var headerRow = [];
 var COLS = [
   'Id solicitud','Solicitante','Sector que pertenece','Area','Sector','Equipo',
   'Parte del equipo','Desvio/Solicitud','Ubicacion (Calle)',
-  'Ubicacion (Dock/Puesto/Calle/Modulo)','Descripcion','Imagen (URL)','Video (URL)',
+  'Ubicación (Dock/Puesto/Calle/Módulo)','Descripcion','Imagen','Video',
   'Estado','Turno responsable','Fecha Planificacion','FechaHora inicio real',
   'FechaHora fin real','Comentario Mantenimiento','Fecha Creacion solicitud',
   'Imagen 2','Imagen 3','Imagen Mantenimiento','Material Pendiente','Comentario de Rechazo',
-  'Cantidad necesaria','Numero de carro','Zona de reparacion','Sites','Prioridad','Tipo reporte'
+  'Cantidad necesaria','Numero de carro','Zona de reparación','Sites','Prioridad','Tipo reporte'
 ];
 
 /* Dropdown data */
@@ -652,7 +652,7 @@ function renderListDebounced(){ clearTimeout(_deb); _deb=setTimeout(renderList,2
 function clearFilters(){ filters={estado:'',area:'',site:'',prioridad:'',text:''}; renderList(); }
 
 function cardHtml(r){
-  var img = r['Imagen (URL)']||'';
+  var img = r['Imagen']||'';
   var h='<div class="card">';
   h+='<div class="card-head">';
   h+='<div><div class="card-id">#'+esc(r['Id solicitud'])+'</div>';
@@ -663,7 +663,7 @@ function cardHtml(r){
   h+='<div><b>Solicitante:</b> '+esc(r['Solicitante'])+'</div>';
   h+='<div><b>Área/Sector:</b> '+esc(r['Area'])+' / '+esc(r['Sector'])+'</div>';
   h+='<div><b>Parte:</b> '+esc(r['Parte del equipo']||'-')+'</div>';
-  h+='<div><b>Ubicación:</b> '+esc(r['Ubicacion (Calle)']||'-')+' / '+esc(r['Ubicacion (Dock/Puesto/Calle/Modulo)']||'-')+'</div>';
+  h+='<div><b>Ubicación:</b> '+esc(r['Ubicacion (Calle)']||'-')+' / '+esc(r['Ubicación (Dock/Puesto/Calle/Módulo)']||'-')+'</div>';
   h+='<div><b>Site:</b> '+esc(r['Sites']||'-')+' &nbsp; <b>Prioridad:</b> ';
   h+= r['Prioridad']?('<span class="badge '+badgeClass(r['Prioridad'])+'">'+esc(r['Prioridad'])+'</span>'):'-';
   h+='</div>';
@@ -673,7 +673,7 @@ function cardHtml(r){
   if(r['Descripcion']) h+='<div class="desc">'+esc(r['Descripcion'])+'</div>';
   if(r['Comentario Mantenimiento']) h+='<div class="desc"><b>Mant.:</b> '+esc(r['Comentario Mantenimiento'])+'</div>';
   if(r['Comentario de Rechazo']) h+='<div class="desc" style="background:#ffebee;"><b>Rechazo:</b> '+esc(r['Comentario de Rechazo'])+'</div>';
-  if(img && img.indexOf('data:')===0) h+='<img class="thumb" src="'+esc(img)+'" alt="img">';
+  if(img) h+='<img class="thumb" src="'+esc(img)+'" alt="img">';
 
   h+='<div class="actions">';
   if(canDo('verTodas')){
@@ -791,10 +791,10 @@ function submitForm(){
   data['Parte del equipo']=val('f_parte');
   data['Desvio/Solicitud']=val('f_desvio');
   data['Ubicacion (Calle)']=val('f_calle');
-  data['Ubicacion (Dock/Puesto/Calle/Modulo)']=val('f_ubic');
+  data['Ubicación (Dock/Puesto/Calle/Módulo)']=val('f_ubic');
   data['Descripcion']=val('f_desc');
-  data['Imagen (URL)']=formImages[0]||'';
-  data['Video (URL)']=val('f_video');
+  data['Imagen']=formImages[0]||'';
+  data['Video']=val('f_video');
   data['Estado']='Pendiente';
   data['Turno responsable']='';
   data['Fecha Planificacion']='';
@@ -809,7 +809,7 @@ function submitForm(){
   data['Comentario de Rechazo']='';
   data['Cantidad necesaria']=val('f_cant');
   data['Numero de carro']=val('f_carro');
-  data['Zona de reparacion']=val('f_zona');
+  data['Zona de reparación']=val('f_zona');
   data['Sites']=val('f_site');
   data['Prioridad']=val('f_prio');
   data['Tipo reporte']=val('f_tipo');
@@ -859,7 +859,7 @@ function openManageRow(r){
   h+=info('Solicitante',r['Solicitante']);
   h+=info('Área / Sector',r['Area']+' / '+r['Sector']);
   h+=info('Parte',r['Parte del equipo']);
-  h+=info('Ubicación',(r['Ubicacion (Calle)']||'-')+' / '+(r['Ubicacion (Dock/Puesto/Calle/Modulo)']||'-'));
+  h+=info('Ubicación',(r['Ubicacion (Calle)']||'-')+' / '+(r['Ubicación (Dock/Puesto/Calle/Módulo)']||'-'));
   h+=info('Site',r['Sites']);
   h+=info('Prioridad',r['Prioridad']);
   h+=info('Creada',r['Fecha Creacion solicitud']);
