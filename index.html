@@ -758,34 +758,37 @@ function opt(arr,sel){
 }
 function renderForm(){
   formImages=[null,null,null];
+  var isOp = session.role==='operativo';
   var h='<div class="form-card"><h2 style="margin-bottom:18px;">Nueva Solicitud</h2><div class="form-grid">';
   h+=fld('Sector que pertenece','<input id="f_sectorpert" placeholder="Sector al que pertenece">');
   h+=fld('Área','<select id="f_area">'+opt(OPTS.Area)+'</select>');
   h+=fld('Sector','<select id="f_sector">'+opt(OPTS.Sector)+'</select>');
   h+=fld('Equipo','<select id="f_equipo">'+opt(OPTS.Equipo)+'</select>');
-  h+=fld('Parte del equipo','<select id="f_parte">'+opt(OPTS.Parte)+'</select>');
-  h+=fld('Desvío / Solicitud','<select id="f_desvio">'+opt(OPTS.Desvio)+'</select>');
-  h+=fld('Prioridad','<select id="f_prio">'+opt(OPTS.Prioridad)+'</select>');
-  h+=fld('Site','<select id="f_site">'+opt(OPTS.Sites)+'</select>');
-  h+=fld('Ubicación (Calle)','<input id="f_calle">');
-  h+=fld('Ubicación (Dock/Puesto/Calle/Módulo)','<input id="f_ubic">');
-  h+=fld('Cantidad necesaria','<input id="f_cant" type="number" min="0">');
-  h+=fld('Número de carro','<input id="f_carro">');
-  h+=fld('Zona de reparación','<input id="f_zona">');
-  h+=fld('Tipo reporte','<input id="f_tipo">');
-  h+=fld('Video (URL)','<input id="f_video" placeholder="https://...">','full');
+  if(!isOp){
+    h+=fld('Parte del equipo','<select id="f_parte">'+opt(OPTS.Parte)+'</select>');
+    h+=fld('Desvío / Solicitud','<select id="f_desvio">'+opt(OPTS.Desvio)+'</select>');
+    h+=fld('Prioridad','<select id="f_prio">'+opt(OPTS.Prioridad)+'</select>');
+    h+=fld('Site','<select id="f_site">'+opt(OPTS.Sites)+'</select>');
+    h+=fld('Ubicación (Calle)','<input id="f_calle">');
+    h+=fld('Ubicación (Dock/Puesto/Calle/Módulo)','<input id="f_ubic">');
+    h+=fld('Cantidad necesaria','<input id="f_cant" type="number" min="0">');
+    h+=fld('Número de carro','<input id="f_carro">');
+    h+=fld('Zona de reparación','<input id="f_zona">');
+    h+=fld('Tipo reporte','<input id="f_tipo">');
+    h+=fld('Video (URL)','<input id="f_video" placeholder="https://...">','full');
+  }
   h+=fld('Descripción','<textarea id="f_desc"></textarea>','full');
-  h+=fld('Imágenes (hasta 3)','<input type="file" accept="image/*" multiple id="f_imgs" onchange="handleImgs(this)"><div class="img-preview" id="imgPrev"></div>','full');
+  if(!isOp)
+    h+=fld('Imágenes (hasta 3)','<input type="file" accept="image/*" multiple id="f_imgs" onchange="handleImgs(this)"><div class="img-preview" id="imgPrev"></div>','full');
   h+='</div>';
   h+='<div class="form-actions"><button class="btn secondary" onclick="render()">Cancelar</button><button class="btn yellow" onclick="submitForm()">Crear solicitud</button></div>';
   h+='</div>';
   $('viewArea').innerHTML=h;
 
-  // cascading: area -> sector (kept simple, all options available but reset downstream on change)
   var fa=$('f_area'),fs=$('f_sector'),fe=$('f_equipo'),fp=$('f_parte');
-  fa.onchange=function(){fs.value='';fe.value='';fp.value='';};
-  fs.onchange=function(){fe.value='';fp.value='';};
-  fe.onchange=function(){fp.value='';};
+  if(fa) fa.onchange=function(){fs.value='';fe.value='';if(fp)fp.value='';};
+  if(fs) fs.onchange=function(){fe.value='';if(fp)fp.value='';};
+  if(fe) fe.onchange=function(){if(fp)fp.value='';};
 }
 function fld(label,inner,full){
   return '<div class="field'+(full?' full':'')+'"><label>'+label+'</label>'+inner+'</div>';
