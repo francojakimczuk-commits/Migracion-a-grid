@@ -762,9 +762,9 @@ function renderForm(){
   h+=fld('Sector que pertenece','<input id="f_sectorpert" placeholder="Sector al que pertenece">');
   h+=fld('Área','<select id="f_area">'+opt(OPTS.Area)+'</select>');
   h+=fld('Sector','<select id="f_sector">'+opt(OPTS.Sector)+'</select>');
-  h+=fld('Equipo','<select id="f_equipo">'+opt(catalogEquipos())+'</select>');
-  h+=fld('Parte del equipo','<select id="f_parte"><option value="">Seleccionar equipo primero...</option></select>');
-  h+=fld('Desvío / Solicitud','<select id="f_desvio"><option value="">Seleccionar parte primero...</option></select>');
+  h+=fld('Equipo','<select id="f_equipo">'+opt(OPTS.Equipo)+'</select>');
+  h+=fld('Parte del equipo','<select id="f_parte">'+opt(OPTS.Parte)+'</select>');
+  h+=fld('Desvío / Solicitud','<select id="f_desvio">'+opt(OPTS.Desvio)+'</select>');
   h+=fld('Prioridad','<select id="f_prio">'+opt(OPTS.Prioridad)+'</select>');
   h+=fld('Site','<select id="f_site">'+opt(OPTS.Sites)+'</select>');
   h+=fld('Ubicación (Calle)','<input id="f_calle">');
@@ -781,17 +781,11 @@ function renderForm(){
   h+='</div>';
   $('viewArea').innerHTML=h;
 
-  // cascading equipo → parte → desvio
-  var fe=$('f_equipo'), fp=$('f_parte'), fd=$('f_desvio');
-  fe.onchange=function(){
-    var eq=fe.value;
-    fp.innerHTML = eq ? opt(catalogPartes(eq)) : '<option value="">Seleccionar equipo primero...</option>';
-    fd.innerHTML='<option value="">Seleccionar parte primero...</option>';
-  };
-  fp.onchange=function(){
-    var eq=fe.value, pa=fp.value;
-    fd.innerHTML = pa ? opt(catalogDesvios(eq,pa)) : '<option value="">Seleccionar parte primero...</option>';
-  };
+  // cascading: area -> sector (kept simple, all options available but reset downstream on change)
+  var fa=$('f_area'),fs=$('f_sector'),fe=$('f_equipo'),fp=$('f_parte');
+  fa.onchange=function(){fs.value='';fe.value='';fp.value='';};
+  fs.onchange=function(){fe.value='';fp.value='';};
+  fe.onchange=function(){fp.value='';};
 }
 function fld(label,inner,full){
   return '<div class="field'+(full?' full':'')+'"><label>'+label+'</label>'+inner+'</div>';
